@@ -64,7 +64,7 @@ pearl_1 = Life4Rank(
         PFCRequirement(level=16, num=2),
         AAARequirement(level=16, num=24),
         # 17s
-        ClearRequirement(  # Not exactly the same, but close enough
+        ClearRequirement(
             level=17, num=44, floor=860_000, num_exceptions=12, exception_floor=810_000
         ),
         AAARequirement(level=17, num=2),
@@ -106,8 +106,8 @@ pearl_2 = Life4Rank(
         PFCRequirement(level=16, num=4),
         AAARequirement(level=16, num=28),
         # 17s
-        ClearRequirement(  # Not exactly the same, but close enough
-            level=17, num=48, num_exceptions=14, exception_floor=820_000
+        ClearRequirement(
+            level=17, num=48, floor=870_000, num_exceptions=14, exception_floor=820_000
         ),
         AAARequirement(level=17, num=4),
         # 18s
