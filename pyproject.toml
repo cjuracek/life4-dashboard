@@ -1,0 +1,23 @@
+[project]
+name = "life4-dashboard"
+version = "0.1.0"
+description = "Life4 Dashboard Application"
+authors = [
+    { name = "Cole Juracek"}
+]
+requires-python = ">=3.11"
+readme = "README.md"
+dependencies = [
+    "click>=8.1.8",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.3",
+    "streamlit>=1.41.1",
+]
+
+[tool.ruff.lint]
+ignore = ["F821"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8.4",
+]
