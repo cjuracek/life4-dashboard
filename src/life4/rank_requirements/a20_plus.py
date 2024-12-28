@@ -121,3 +121,45 @@ pearl_2 = Life4Rank(
     ],
     substitutions=pearl_substitutions,
 )
+
+pearl_3 = Life4Rank(
+    rank=Life4RankEnum.Pearl,
+    subrank=3,
+    requirements=[
+        # 14s
+        LampRequirement(level=14, lamp=Lamp.Red),
+        FloorRequirement(
+            level=14, floor=985_000, num_exceptions=7, exception_floor=965_000
+        ),
+        PFCRequirement(level=14, num=64),
+        AAARequirement(level=14, num=110),
+        # 15s
+        LampRequirement(level=15, lamp=Lamp.Clear),
+        FloorRequirement(
+            level=15, floor=965_000, num_exceptions=12, exception_floor=930_000
+        ),
+        PFCRequirement(level=15, num=28),
+        AAARequirement(level=15, num=80),
+        # 16s
+        LampRequirement(level=16, lamp=Lamp.Clear),
+        FloorRequirement(
+            level=16, floor=930_000, num_exceptions=17, exception_floor=880_000
+        ),
+        PFCRequirement(level=16, num=6),
+        AAARequirement(level=16, num=32),
+        # 17s
+        ClearRequirement(
+            level=17, num=52, floor=880_000, num_exceptions=16, exception_floor=830_000
+        ),
+        AAARequirement(level=17, num=6),
+        # 18s
+        ClearRequirement(level=18, num=22),
+        CeilingRequirement(level=18, ceiling=930_000),
+        # Other
+        MAPointsRequirement(num=6),
+        SDPRequirement(level=7),
+        MFCRequirement(level=4),
+        TrialRequirement(rank=Life4RankEnum.Cobalt, num=2),
+    ],
+    substitutions=pearl_substitutions,
+)
