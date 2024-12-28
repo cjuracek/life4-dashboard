@@ -1,3 +1,4 @@
+import uuid
 from typing import Protocol
 
 import streamlit as st
@@ -33,7 +34,7 @@ class LampRequirement:
             self.__str__(),
             disabled=True,
             value=self.is_satisfied(lamp),
-            key=f"{self.level} {self.__str__()}",
+            key=str(uuid.uuid4()),
         )
 
 
@@ -52,7 +53,10 @@ class PFCRequirement:
     def create_checkbox(self, data: "DDRDataset"):
         is_satisfied = data.get_num_pfcs(self.level) >= self.num_pfc
         st.checkbox(
-            self.__str__(), disabled=True, value=is_satisfied, key=self.__str__()
+            self.__str__(),
+            disabled=True,
+            value=is_satisfied,
+            key=str(uuid.uuid4()),
         )
 
 
@@ -71,7 +75,10 @@ class AAARequirement:
     def create_checkbox(self, data: "DDRDataset"):
         is_satisfied = data.get_num_AAA(level=self.level) >= self.num_AAA
         st.checkbox(
-            self.__str__(), disabled=True, value=is_satisfied, key=self.__str__()
+            self.__str__(),
+            disabled=True,
+            value=is_satisfied,
+            key=str(uuid.uuid4()),
         )
 
 
@@ -126,7 +133,7 @@ class ClearRequirement:
             self.__str__(),
             disabled=True,
             value=value,
-            key=self.__str__(),
+            key=str(uuid.uuid4()),
         )
 
 
@@ -145,7 +152,10 @@ class CeilingRequirement:
     def create_checkbox(self, data: "DDRDataset"):
         is_satisfied = data.get_ceiling(level=self.level) >= self.ceiling
         st.checkbox(
-            self.__str__(), disabled=True, value=is_satisfied, key=self.__str__()
+            self.__str__(),
+            disabled=True,
+            value=is_satisfied,
+            key=str(uuid.uuid4()),
         )
 
 
@@ -192,7 +202,7 @@ class FloorRequirement:
             self.__str__(),
             disabled=True,
             value=self.is_satisfied(data),
-            key=self.__str__(),
+            key=str(uuid.uuid4()),
         )
 
 
@@ -210,7 +220,10 @@ class MAPointsRequirement:
     def create_checkbox(self, data: "DDRDataset"):
         is_satisfied = data.get_ma_points() >= self.points_required
         st.checkbox(
-            self.__str__(), disabled=True, value=is_satisfied, key=self.__str__()
+            self.__str__(),
+            disabled=True,
+            value=is_satisfied,
+            key=str(uuid.uuid4()),
         )
 
 
@@ -228,7 +241,10 @@ class SDPRequirement:
     def create_checkbox(self, data: "DDRDataset"):
         is_satisfied = max(data.get_sdps()["Level"])
         st.checkbox(
-            self.__str__(), disabled=True, value=is_satisfied, key=self.__str__()
+            self.__str__(),
+            disabled=True,
+            value=is_satisfied,
+            key=str(uuid.uuid4()),
         )
 
 
@@ -246,7 +262,10 @@ class MFCRequirement:
     def create_checkbox(self, data: "DDRDataset"):
         is_satisfied = max(data.get_lamp(Lamp.White)["Level"]) >= self.level
         st.checkbox(
-            self.__str__(), disabled=True, value=is_satisfied, key=self.__str__()
+            self.__str__(),
+            disabled=True,
+            value=is_satisfied,
+            key=str(uuid.uuid4()),
         )
 
 
@@ -269,5 +288,5 @@ class TrialRequirement:
             self.__str__(),
             disabled=True,
             value=True,  # TODO
-            key=self.__str__(),
+            key=str(uuid.uuid4()),
         )
