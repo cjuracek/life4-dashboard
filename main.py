@@ -16,9 +16,9 @@ def main(data_path: str):
         pearl_2.visualize(data)
     with col3:
         pearl_3.visualize(data)
-        
+
     st.markdown("<br><br>", unsafe_allow_html=True)
-    
+
     col4, col5 = st.columns(2)
     with col4:
         pearl_4.visualize(data)
