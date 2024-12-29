@@ -280,10 +280,15 @@ class TrialRequirement:
         trial_str = "Trial" if self.num == 1 else "Trials"
         return f"Earn {self.rank.name} or above on {self.num} {trial_str}"
 
+    def _is_satisfied(self, data):
+        valid_trials = [trial for trial in data.trials if trial.rank >= self.rank]
+        return len(valid_trials) >= self.num
+    
     def create_checkbox(self, data):
+        is_satisfied = self._is_satisfied(data)
         return st.checkbox(
             self.__str__(),
             disabled=True,
-            value=True,  # TODO
+            value=is_satisfied,
             key=str(uuid.uuid4()),
         )

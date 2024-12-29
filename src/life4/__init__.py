@@ -43,7 +43,7 @@ class Life4RankEnum(IntEnum):
 
 class Life4Trial(BaseModel):
     name: str = Field(..., alias="Name")
-    level: int = Field(gt=0, lt=20, alias="Level")
+    level: int = Field(..., gt=0, lt=20, alias="Level")
     rank: Life4RankEnum = Field(..., alias="Rank")
 
     @field_validator("rank", mode="before")
