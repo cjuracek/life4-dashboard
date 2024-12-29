@@ -2,7 +2,6 @@ from enum import IntEnum
 from typing import List
 
 import streamlit as st
-
 from pydantic import BaseModel, Field, field_validator
 
 MFC_POINT_MAPPING = {
@@ -41,6 +40,7 @@ class Life4RankEnum(IntEnum):
     Emerald = 9
     Onyx = 10
 
+
 class Life4Trial(BaseModel):
     name: str = Field(..., alias="Name")
     level: int = Field(..., gt=0, lt=20, alias="Level")
@@ -54,6 +54,7 @@ class Life4Trial(BaseModel):
             except KeyError:
                 raise ValueError(f"Invalid rank value: {v}")
         return v
+
 
 class Life4Rank:
     def __init__(

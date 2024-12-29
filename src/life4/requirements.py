@@ -283,7 +283,7 @@ class TrialRequirement:
     def _is_satisfied(self, data):
         valid_trials = [trial for trial in data.trials if trial.rank >= self.rank]
         return len(valid_trials) >= self.num
-    
+
     def create_checkbox(self, data):
         is_satisfied = self._is_satisfied(data)
         return st.checkbox(

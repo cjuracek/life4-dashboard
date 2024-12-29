@@ -40,8 +40,9 @@ class DDRDataset:
 
         # Add trials information
         trials_df = pd.read_excel(data_path, sheet_name="Trials")
-        self.trials = [Life4Trial(**trial.to_dict()) for _, trial in trials_df.iterrows()]
-
+        self.trials = [
+            Life4Trial(**trial.to_dict()) for _, trial in trials_df.iterrows()
+        ]
 
     def _get_lamp(self, row) -> Lamp:
         if row["Score"] == 1_000_000:
