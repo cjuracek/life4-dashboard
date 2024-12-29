@@ -269,9 +269,6 @@ class MFCRequirement:
         )
 
 
-TRIALS = {Life4RankEnum.Cobalt: 1}
-
-
 class TrialRequirement:
     multiple_levels = True
 
