@@ -10,7 +10,8 @@ from life4.ddr import Lamp
 class Requirement(Protocol):
     multiple_levels: bool
 
-    def is_satisfied(self): ...
+    def is_satisfied(self):
+        ...
 
 
 class LampRequirement:
