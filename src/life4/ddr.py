@@ -1,9 +1,12 @@
 from enum import IntEnum
+import streamlit as st
 
 import pandas as pd
 
 from life4 import MFC_POINT_MAPPING, SDP_POINT_MAPPING, Life4Trial
 
+def test1():
+    st.write("Test 1 success (DDR)")
 
 class Lamp(IntEnum):
     NO_LAMP = 0
