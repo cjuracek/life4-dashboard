@@ -18,7 +18,7 @@ class Lamp(IntEnum):
 class DDRDataset:
     def __init__(
         self,
-        data_path,
+        data_path,  # Local path or onedrive link
         filter_doubles=True,
         filter_course_trials=True,
         filter_other=True,

@@ -6,7 +6,12 @@ from life4.rank_requirements.a20_plus import pearl_1, pearl_2, pearl_3, pearl_4,
 
 
 @click.command()
-@click.option("--data-path", required=True, type=str, help="Path to data file")
+@click.option(
+    "--data-path",
+    default=st.secrets["onedrive_data_link"],
+    type=str,
+    help="Path to data file",
+)
 def main(data_path: str):
     data = DDRDataset(data_path)
 
