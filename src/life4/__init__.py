@@ -93,9 +93,9 @@ class Life4Rank:
         _ = [req.create_checkbox(data) for req in requirements if req.multiple_levels]
 
     def visualize(self, data: "DDRDataset"):
-        """Visualize rank_requirements + substitutions as a series of Streamlit checkboxes"""
-        st.write(self.rank.name, str(self.subrank))
-
-        self._visualize_reqs(self.requirements, data)
-        st.write("Substitutions")
-        self._visualize_reqs(self.substitutions, data)
+        """Visualize rank_requirements + substitutions as a series of Streamlit checkboxes in collapsible menu"""
+        with st.expander(f"{self.rank.name} {str(self.subrank)}", expanded=False):
+            st.write("Requirements")
+            self._visualize_reqs(self.requirements, data)
+            st.write("Substitutions")
+            self._visualize_reqs(self.substitutions, data)
