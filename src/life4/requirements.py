@@ -1,5 +1,5 @@
 import uuid
-from typing import Protocol
+from abc import ABC, abstractmethod
 
 import streamlit as st
 
@@ -7,14 +7,23 @@ from life4 import Life4RankEnum
 from life4.ddr import Lamp
 
 
-class Requirement(Protocol):
+class Requirement(ABC):
     multiple_levels: bool
 
-    def is_satisfied(self):
-        ...
+    @abstractmethod
+    def is_satisfied(self, data: "DDRDataset"):
+        pass
+
+    def create_checkbox(self, data: "DDRDataset"):
+        st.checkbox(
+            self.__str__(),
+            disabled=True,
+            value=self.is_satisfied(data),
+            key=str(uuid.uuid4()),
+        )
 
 
-class LampRequirement:
+class LampRequirement(Requirement):
     """E.g. 'Red Lamp' (for a given difficulty)"""
 
     multiple_levels = False
@@ -26,20 +35,12 @@ class LampRequirement:
     def __str__(self):
         return f"{self.lamp.name} Lamp"
 
-    def is_satisfied(self, lamp):
+    def is_satisfied(self, data: "DDRDataset"):
+        lamp = data.get_level_lamp(level=self.level)
         return lamp >= self.lamp
 
-    def create_checkbox(self, data: "DDRDataset"):
-        lamp = data.get_level_lamp(level=self.level)
-        st.checkbox(
-            self.__str__(),
-            disabled=True,
-            value=self.is_satisfied(lamp),
-            key=str(uuid.uuid4()),
-        )
 
-
-class PFCRequirement:
+class PFCRequirement(Requirement):
     """E.g. 'PFC 56 14s'"""
 
     multiple_levels = False
@@ -51,17 +52,11 @@ class PFCRequirement:
     def __str__(self):
         return f"PFC {self.num_pfc} {self.level}s"
 
-    def create_checkbox(self, data: "DDRDataset"):
-        is_satisfied = data.get_num_pfcs(self.level) >= self.num_pfc
-        st.checkbox(
-            self.__str__(),
-            disabled=True,
-            value=is_satisfied,
-            key=str(uuid.uuid4()),
-        )
+    def is_satisfied(self, data: "DDRDataset"):
+        return data.get_num_pfcs(self.level) >= self.num_pfc
 
 
-class AAARequirement:
+class AAARequirement(Requirement):
     """E.g. 'AAA 132 14s'"""
 
     multiple_levels = False
@@ -73,17 +68,11 @@ class AAARequirement:
     def __str__(self):
         return f"AAA {self.num_AAA} {self.level}s"
 
-    def create_checkbox(self, data: "DDRDataset"):
-        is_satisfied = data.get_num_AAA(level=self.level) >= self.num_AAA
-        st.checkbox(
-            self.__str__(),
-            disabled=True,
-            value=is_satisfied,
-            key=str(uuid.uuid4()),
-        )
+    def is_satisfied(self, data: "DDRDataset"):
+        return data.get_num_AAA(level=self.level) >= self.num_AAA
 
 
-class ClearRequirement:
+class ClearRequirement(Requirement):
     """E.g. 'Clear 18 18s' and 'Clear 44 17s over 860k (12E, 810k)'"""
 
     multiple_levels = False
@@ -128,17 +117,8 @@ class ClearRequirement:
         total_valid_scores = len(scores_over_floor) + num_valid_exceptions
         return total_valid_scores >= self.num_required
 
-    def create_checkbox(self, data: "DDRDataset"):
-        value = self.is_satisfied(data)
-        st.checkbox(
-            self.__str__(),
-            disabled=True,
-            value=value,
-            key=str(uuid.uuid4()),
-        )
 
-
-class CeilingRequirement:
+class CeilingRequirement(Requirement):
     """E.g. '920k+ an 18'"""
 
     multiple_levels = False
@@ -150,17 +130,11 @@ class CeilingRequirement:
     def __str__(self):
         return f"{str(self.ceiling)[:3]}k+ an {self.level}"
 
-    def create_checkbox(self, data: "DDRDataset"):
-        is_satisfied = data.get_ceiling(level=self.level) >= self.ceiling
-        st.checkbox(
-            self.__str__(),
-            disabled=True,
-            value=is_satisfied,
-            key=str(uuid.uuid4()),
-        )
+    def is_satisfied(self, data: "DDRDataset"):
+        return data.get_ceiling(level=self.level) >= self.ceiling
 
 
-class FloorRequirement:
+class FloorRequirement(Requirement):
     """E.g. 'All 16s over 920k'"""
 
     multiple_levels = False
@@ -198,16 +172,8 @@ class FloorRequirement:
         )
         return len(songs_below_threshold) <= self.num_exceptions
 
-    def create_checkbox(self, data: "DDRDataset"):
-        return st.checkbox(
-            self.__str__(),
-            disabled=True,
-            value=self.is_satisfied(data),
-            key=str(uuid.uuid4()),
-        )
 
-
-class MAPointsRequirement:
+class MAPointsRequirement(Requirement):
     """E.g. 'MA Points: 4'"""
 
     multiple_levels = True
@@ -218,17 +184,11 @@ class MAPointsRequirement:
     def __str__(self):
         return f"MA Points: {self.points_required}"
 
-    def create_checkbox(self, data: "DDRDataset"):
-        is_satisfied = data.get_ma_points() >= self.points_required
-        st.checkbox(
-            self.__str__(),
-            disabled=True,
-            value=is_satisfied,
-            key=str(uuid.uuid4()),
-        )
+    def is_satisfied(self, data: "DDRDataset"):
+        return data.get_ma_points() >= self.points_required
 
 
-class SDPRequirement:
+class SDPRequirement(Requirement):
     """Requirement for getting a SDP at or above a given level"""
 
     multiple_levels = True
@@ -239,17 +199,11 @@ class SDPRequirement:
     def __str__(self):
         return f"SDP a {self.level}+"
 
-    def create_checkbox(self, data: "DDRDataset"):
-        is_satisfied = max(data.get_sdps()["Level"])
-        st.checkbox(
-            self.__str__(),
-            disabled=True,
-            value=is_satisfied,
-            key=str(uuid.uuid4()),
-        )
+    def is_satisfied(self, data: "DDRDataset"):
+        return max(data.get_sdps()["Level"]) >= self.level
 
 
-class MFCRequirement:
+class MFCRequirement(Requirement):
     """Requirement for getting an MFC at or above a given level"""
 
     multiple_levels = True
@@ -260,17 +214,11 @@ class MFCRequirement:
     def __str__(self):
         return f"MFC a {self.level}+"
 
-    def create_checkbox(self, data: "DDRDataset"):
-        is_satisfied = max(data.get_lamp(Lamp.White)["Level"]) >= self.level
-        st.checkbox(
-            self.__str__(),
-            disabled=True,
-            value=is_satisfied,
-            key=str(uuid.uuid4()),
-        )
+    def is_satisfied(self, data: "DDRDataset"):
+        return max(data.get_lamp(Lamp.White)["Level"]) >= self.level
 
 
-class TrialRequirement:
+class TrialRequirement(Requirement):
     multiple_levels = True
 
     def __init__(self, rank: Life4RankEnum, num: int):
@@ -281,15 +229,6 @@ class TrialRequirement:
         trial_str = "Trial" if self.num == 1 else "Trials"
         return f"Earn {self.rank.name} or above on {self.num} {trial_str}"
 
-    def _is_satisfied(self, data):
+    def is_satisfied(self, data):
         valid_trials = [trial for trial in data.trials if trial.rank >= self.rank]
         return len(valid_trials) >= self.num
-
-    def create_checkbox(self, data):
-        is_satisfied = self._is_satisfied(data)
-        return st.checkbox(
-            self.__str__(),
-            disabled=True,
-            value=is_satisfied,
-            key=str(uuid.uuid4()),
-        )

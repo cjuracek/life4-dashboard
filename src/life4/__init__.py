@@ -94,7 +94,25 @@ class Life4Rank:
 
     def visualize(self, data: "DDRDataset"):
         """Visualize rank_requirements + substitutions as a series of Streamlit checkboxes in collapsible menu"""
-        with st.expander(f"{self.rank.name} {str(self.subrank)}", expanded=False):
+        completed_requirements = len(
+            [req for req in self.requirements if req.is_satisfied(data)]
+        )
+        total_requirements = len(self.requirements)
+        available_substitutions = len(
+            [sub for sub in self.substitutions if sub.is_satisfied(data)]
+        )
+        progress = f"{completed_requirements}/{total_requirements}"
+        expander_title = f"**{self.rank.name} {self.subrank}**"
+
+        status_emoji = (
+            ":white_check_mark:"
+            if completed_requirements + available_substitutions >= total_requirements
+            else ":construction:"
+        )
+        expander_title += f" {status_emoji}"
+
+        expander_title += f"\n\n  • {progress} requirements completed\n\n  • {available_substitutions} substitutions available"
+        with st.expander(expander_title, expanded=False):
             st.write("Requirements")
             self._visualize_reqs(self.requirements, data)
             st.write("Substitutions")
