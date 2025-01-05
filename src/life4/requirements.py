@@ -178,8 +178,8 @@ class MAPointsRequirement(Requirement):
 
     multiple_levels = True
 
-    def __init__(self, num: int):
-        self.points_required = num
+    def __init__(self, points: int):
+        self.points_required = points
 
     def __str__(self):
         return f"MA Points: {self.points_required}"
@@ -193,7 +193,7 @@ class SDPRequirement(Requirement):
 
     multiple_levels = True
 
-    def __init__(self, level):
+    def __init__(self, level: int):
         self.level = level
 
     def __str__(self):
@@ -208,7 +208,7 @@ class MFCRequirement(Requirement):
 
     multiple_levels = True
 
-    def __init__(self, level):
+    def __init__(self, level: int):
         self.level = level
 
     def __str__(self):
