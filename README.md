@@ -1,5 +1,7 @@
 # Life4 Dashboard
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://life4-dashboard.streamlit.app/)
+
 A streamlit application for visualizing my journey through Dance Dance Revolution's [Life4 system](https://life4ddr.com/).
 
 ## Installation
