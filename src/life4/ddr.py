@@ -2,7 +2,7 @@ from enum import IntEnum
 
 
 from life4 import MFC_POINT_MAPPING, SDP_POINT_MAPPING, Life4Trial
-from life4.data.interfaces import DataSource
+from life4.data.interfaces import ScoreTrialFetcher
 
 
 class Lamp(IntEnum):
@@ -18,7 +18,7 @@ class Lamp(IntEnum):
 class DDRDataset:
     def __init__(
         self,
-        data_source: DataSource,
+        data_source: ScoreTrialFetcher,
         filter_doubles=True,
         filter_course_trials=True,
         filter_other=True,
