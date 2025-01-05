@@ -1,8 +1,8 @@
 from enum import IntEnum
 
-import pandas as pd
 
 from life4 import MFC_POINT_MAPPING, SDP_POINT_MAPPING, Life4Trial
+from life4.data.interfaces import DataSource
 
 
 class Lamp(IntEnum):
@@ -18,13 +18,13 @@ class Lamp(IntEnum):
 class DDRDataset:
     def __init__(
         self,
-        data_path,  # Local path or onedrive link
+        data_source: DataSource,
         filter_doubles=True,
         filter_course_trials=True,
         filter_other=True,
     ):
-        print(f"Reading data from: {data_path}")
-        self._data = pd.read_excel(data_path)
+        print(f"Reading data from: {data_source}")
+        self._data = data_source.load_scores()
         if filter_doubles:
             singles_diff = ["bSP", "BSP", "DSP", "ESP", "CSP"]  # noqa: F841
             self._data = self._data.query("Diff in @singles_diff")
@@ -39,7 +39,7 @@ class DDRDataset:
         self._data["Lamp"] = self._data.apply(func=self._get_lamp, axis=1)
 
         # Add trials information
-        trials_df = pd.read_excel(data_path, sheet_name="Trials")
+        trials_df = data_source.load_trials()
         self.trials = [
             Life4Trial(**trial.to_dict()) for _, trial in trials_df.iterrows()
         ]
