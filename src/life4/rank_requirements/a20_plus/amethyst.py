@@ -121,3 +121,49 @@ amethyst_2 = Life4Rank(
     ],
     substitutions=amethyst_substitutions,
 )
+
+amethyst_3 = Life4Rank(
+    rank=Life4RankEnum.Amethyst,
+    subrank=3,
+    requirements=[
+        # 14s
+        LampRequirement(level=14, lamp=Lamp.Blue),
+        FloorRequirement(
+            level=14, floor=993_000, num_exceptions=2, exception_floor=985_000
+        ),
+        PFCRequirement(level=14, num=104),
+        # 15s
+        LampRequirement(level=15, lamp=Lamp.Red),
+        FloorRequirement(
+            level=15, floor=985_000, num_exceptions=7, exception_floor=965_000
+        ),
+        PFCRequirement(level=15, num=64),
+        AAARequirement(level=15, num=118),
+        # 16s
+        LampRequirement(level=16, lamp=Lamp.Clear),
+        FloorRequirement(
+            level=16, floor=965_000, num_exceptions=12, exception_floor=930_000
+        ),
+        PFCRequirement(level=16, num=22),
+        AAARequirement(level=16, num=64),
+        # 17s
+        LampRequirement(level=17, lamp=Lamp.Clear),
+        FloorRequirement(
+            level=17, floor=930_000, num_exceptions=17, exception_floor=880_000
+        ),
+        AAARequirement(level=17, num=16),
+        # 18s
+        ClearRequirement(
+            level=18, num=36, floor=830_000, num_exceptions=16, exception_floor=780_000
+        ),
+        FloorRequirement(level=18, floor=980_000),
+        # 19s
+        FloorRequirement(level=19, floor=760_000),
+        # Other
+        MAPointsRequirement(points=16),
+        SDPRequirement(level=10),
+        MFCRequirement(level=7),
+        TrialRequirement(rank=Life4RankEnum.Pearl, num=2),
+    ],
+    substitutions=amethyst_substitutions,
+)
