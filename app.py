@@ -14,6 +14,7 @@ from life4.rank_requirements.a20_plus.pearl import (  # noqa: E402
     pearl_4,
     pearl_5,
 )
+from life4.ui.life4_ui import Life4RankDisplay  # noqa: E402
 
 st.set_page_config(layout="wide")
 
@@ -42,7 +43,8 @@ def main(data_source: dict):
     columns = st.columns(5)
     for rank, column in zip([pearl_1, pearl_2, pearl_3, pearl_4, pearl_5], columns):
         with column:
-            rank.visualize(data)
+            rank_display = Life4RankDisplay(rank, data)
+            rank_display.visualize()
 
 
 if __name__ == "__main__":
