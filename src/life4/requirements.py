@@ -1,7 +1,5 @@
-import uuid
 from abc import ABC, abstractmethod
 
-import streamlit as st
 
 from life4 import Life4RankEnum
 from life4.ddr import Lamp
@@ -13,14 +11,6 @@ class Requirement(ABC):
     @abstractmethod
     def is_satisfied(self, data: "DDRDataset"):
         pass
-
-    def create_checkbox(self, data: "DDRDataset"):
-        st.checkbox(
-            self.__str__(),
-            disabled=True,
-            value=self.is_satisfied(data),
-            key=str(uuid.uuid4()),
-        )
 
 
 class LampRequirement(Requirement):

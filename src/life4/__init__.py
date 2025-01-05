@@ -1,7 +1,6 @@
 from enum import IntEnum
 from typing import List
 
-import streamlit as st
 from pydantic import BaseModel, Field, field_validator
 
 MFC_POINT_MAPPING = {
@@ -71,49 +70,3 @@ class Life4Rank:
 
     def __str__(self):
         return f"{self.rank.name} {self.subrank}"
-
-    def _visualize_reqs(self, requirements: List["Requirement"], data):
-        requirement_levels = range(14, 20)
-        level_to_requirements = {
-            level: [
-                req
-                for req in requirements
-                if not req.multiple_levels and req.level == level
-            ]
-            for level in requirement_levels
-        }
-        for level, level_reqs in level_to_requirements.items():
-            if not level_reqs:
-                continue
-
-            st.write(f"{level}s")
-            _ = [level_req.create_checkbox(data) for level_req in level_reqs]
-
-        st.write("Other")
-        _ = [req.create_checkbox(data) for req in requirements if req.multiple_levels]
-
-    def visualize(self, data: "DDRDataset"):
-        """Visualize rank_requirements + substitutions as a series of Streamlit checkboxes in collapsible menu"""
-        completed_requirements = len(
-            [req for req in self.requirements if req.is_satisfied(data)]
-        )
-        total_requirements = len(self.requirements)
-        available_substitutions = len(
-            [sub for sub in self.substitutions if sub.is_satisfied(data)]
-        )
-        progress = f"{completed_requirements}/{total_requirements}"
-        expander_title = f"**{self.rank.name} {self.subrank}**"
-
-        status_emoji = (
-            ":white_check_mark:"
-            if completed_requirements + available_substitutions >= total_requirements
-            else ":construction:"
-        )
-        expander_title += f" {status_emoji}"
-
-        expander_title += f"\n\n  • {progress} requirements completed\n\n  • {available_substitutions} substitutions available"
-        with st.expander(expander_title, expanded=False):
-            st.write("Requirements")
-            self._visualize_reqs(self.requirements, data)
-            st.write("Substitutions")
-            self._visualize_reqs(self.substitutions, data)

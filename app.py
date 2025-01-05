@@ -14,6 +14,14 @@ from life4.rank_requirements.a20_plus.pearl import (  # noqa: E402
     pearl_4,
     pearl_5,
 )
+from life4.rank_requirements.a20_plus.amethyst import (  # noqa: E402
+    amethyst_1,
+    amethyst_2,
+    amethyst_3,
+    amethyst_4,
+    amethyst_5,
+)
+from life4.ui.life4_ui import Life4RankDisplay  # noqa: E402
 
 st.set_page_config(layout="wide")
 
@@ -39,10 +47,20 @@ def main(data_source: dict):
     data_source = data_source_factory(data_source)
     data = DDRDataset(data_source=data_source)
 
+    rank_choice = st.selectbox(
+        "Select rank",
+        ("Pearl", "Amethyst"),
+    )
+    if rank_choice == "Pearl":
+        subranks = [pearl_1, pearl_2, pearl_3, pearl_4, pearl_5]
+    else:
+        subranks = [amethyst_1, amethyst_2, amethyst_3, amethyst_4, amethyst_5]
+
     columns = st.columns(5)
-    for rank, column in zip([pearl_1, pearl_2, pearl_3, pearl_4, pearl_5], columns):
+    for rank, column in zip(subranks, columns):
         with column:
-            rank.visualize(data)
+            rank_display = Life4RankDisplay(rank, data)
+            rank_display.visualize()
 
 
 if __name__ == "__main__":
