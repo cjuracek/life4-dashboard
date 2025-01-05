@@ -1,3 +1,6 @@
+import uuid
+from typing import List
+
 import streamlit as st
 
 from src.life4 import Life4Rank
@@ -35,11 +38,7 @@ class Life4RankDisplay:
             _ = [self.create_checkbox(level_req) for level_req in level_reqs]
 
         st.write("Other")
-        _ = [
-            req.create_checkbox(self.data)
-            for req in requirements
-            if req.multiple_levels
-        ]
+        _ = [self.create_checkbox(req) for req in requirements if req.multiple_levels]
 
     def visualize(self):
         """Visualize rank_requirements + substitutions as a series of Streamlit checkboxes in collapsible menu"""
@@ -67,6 +66,6 @@ class Life4RankDisplay:
         expander_title += f"\n\n  • {progress} requirements completed\n\n  • {available_substitutions} substitutions available"
         with st.expander(expander_title, expanded=False):
             st.write("Requirements")
-            self._visualize_reqs(self.requirements)
+            self._visualize_reqs(self.life4_rank.requirements)
             st.write("Substitutions")
-            self._visualize_reqs(self.substitutions)
+            self._visualize_reqs(self.life4_rank.substitutions)
