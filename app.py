@@ -7,7 +7,13 @@ import streamlit as st  # noqa: E402
 from life4.data.backends import OnedriveDataSource, GoogleSheetsDataSource  # noqa: E402
 
 from life4.ddr import DDRDataset  # noqa: E402
-from life4.rank_requirements.a20_plus import pearl_1, pearl_2, pearl_3, pearl_4, pearl_5  # noqa: E402
+from life4.rank_requirements.a20_plus.pearl import (  # noqa: E402
+    pearl_1,
+    pearl_2,
+    pearl_3,
+    pearl_4,
+    pearl_5,
+)
 
 st.set_page_config(layout="wide")
 

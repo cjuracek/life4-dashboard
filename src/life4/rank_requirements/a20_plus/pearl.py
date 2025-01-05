@@ -72,7 +72,7 @@ pearl_1 = Life4Rank(
         ClearRequirement(level=18, num=14),
         CeilingRequirement(level=18, ceiling=910_000),
         # Other
-        MAPointsRequirement(num=2),
+        MAPointsRequirement(points=2),
         SDPRequirement(level=6),
         MFCRequirement(level=2),
         TrialRequirement(rank=Life4RankEnum.Cobalt, num=1),
@@ -114,7 +114,7 @@ pearl_2 = Life4Rank(
         ClearRequirement(level=18, num=18),
         CeilingRequirement(level=18, ceiling=920_000),
         # Other
-        MAPointsRequirement(num=4),
+        MAPointsRequirement(points=4),
         SDPRequirement(level=7),
         MFCRequirement(level=3),
         TrialRequirement(rank=Life4RankEnum.Cobalt, num=1),
@@ -156,7 +156,7 @@ pearl_3 = Life4Rank(
         ClearRequirement(level=18, num=22),
         CeilingRequirement(level=18, ceiling=930_000),
         # Other
-        MAPointsRequirement(num=6),
+        MAPointsRequirement(points=6),
         SDPRequirement(level=7),
         MFCRequirement(level=4),
         TrialRequirement(rank=Life4RankEnum.Cobalt, num=2),
@@ -198,7 +198,7 @@ pearl_4 = Life4Rank(
         ClearRequirement(level=18, num=26),
         CeilingRequirement(level=18, ceiling=940_000),
         # Other
-        MAPointsRequirement(num=8),
+        MAPointsRequirement(points=8),
         SDPRequirement(level=8),
         MFCRequirement(level=5),
         TrialRequirement(rank=Life4RankEnum.Cobalt, num=2),
@@ -244,7 +244,7 @@ pearl_5 = Life4Rank(
         # 19s
         CeilingRequirement(level=19, ceiling=700_000),
         # Other
-        MAPointsRequirement(num=10),
+        MAPointsRequirement(points=10),
         SDPRequirement(level=8),
         MFCRequirement(level=6),
         TrialRequirement(rank=Life4RankEnum.Pearl, num=1),
