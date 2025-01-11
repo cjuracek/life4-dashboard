@@ -41,14 +41,17 @@ class LampRequirement(Requirement, ProgressDisplay):
         return f"{len(valid_lamps)}/{len(lamps)}"
 
     def display_str(self, data: "DDRDataset") -> str:
-        return f"{self} ({self.get_progress(data)})"
+        str_to_display = str(self)
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
 
     def is_satisfied(self, data: "DDRDataset"):
         lamp = data.get_level_lamp(level=self.level)
         return lamp >= self.lamp
 
 
-class PFCRequirement(Requirement):
+class PFCRequirement(Requirement, ProgressDisplay):
     """E.g. 'PFC 56 14s'"""
 
     multiple_levels = False
@@ -57,14 +60,17 @@ class PFCRequirement(Requirement):
         self.level = level
         self.num_pfc = num
 
-    def __str__(self):
-        return f"PFC {self.num_pfc} {self.level}s"
-
     def is_satisfied(self, data: "DDRDataset"):
         return data.get_num_pfcs(self.level) >= self.num_pfc
 
+    def get_progress(self, data: "DDRDataset"):
+        return f"{data.get_num_pfcs(self.level)}/{self.num_pfc}"
+
     def display_str(self, data: "DDRDataset") -> str:
-        return "Not implemented"
+        str_to_display = f"PFC {self.num_pfc} {self.level}s"
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
 
 
 class AAARequirement(Requirement):
