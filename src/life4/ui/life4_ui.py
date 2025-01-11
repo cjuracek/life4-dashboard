@@ -14,7 +14,7 @@ class Life4RankDisplay:
 
     def create_checkbox(self, requirement: "Requirement"):
         st.checkbox(
-            str(requirement),
+            requirement.display_str(self.data),
             disabled=True,
             value=requirement.is_satisfied(self.data),
             key=str(uuid.uuid4()),
