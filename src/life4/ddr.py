@@ -96,6 +96,16 @@ class DDRDataset:
         level_songs = self.get_level(level)
         return level_songs[level_songs["Score"] < threshold]
 
+    def get_songs_above_threshold(self, level: int, threshold: int):
+        level_songs = self.get_level(level)
+        return level_songs[level_songs["Score"] >= threshold]
+
+    def get_songs_in_range(self, level: int, lower: int, upper: int):
+        level_songs = self.get_level(level)
+        return level_songs[
+            (level_songs["Score"] >= lower) & (level_songs["Score"] < upper)
+        ]
+
     def get_sdps(self):
         sdps = self._data[(self._data["Lamp"] == Lamp.Gold) & (self._data["Perf"] < 10)]
         return sdps
