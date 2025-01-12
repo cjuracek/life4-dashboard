@@ -160,7 +160,7 @@ class CeilingRequirement(Requirement):
         return data.get_ceiling(level=self.level) >= self.ceiling
 
     def display_str(self, data: "DDRDataset") -> str:
-        return "Not implemented"
+        return str(self)
 
 
 class FloorRequirement(Requirement, ProgressDisplay):
@@ -256,7 +256,7 @@ class SDPRequirement(Requirement):
         return max(data.get_sdps()["Level"]) >= self.level
 
     def display_str(self, data: "DDRDataset") -> str:
-        return "Not implemented"
+        return str(self)
 
 
 class MFCRequirement(Requirement):
@@ -274,7 +274,7 @@ class MFCRequirement(Requirement):
         return max(data.get_lamp(Lamp.White)["Level"]) >= self.level
 
     def display_str(self, data: "DDRDataset") -> str:
-        return "Not implemented"
+        return str(self)
 
 
 class TrialRequirement(Requirement):
@@ -293,4 +293,4 @@ class TrialRequirement(Requirement):
         return len(valid_trials) >= self.num
 
     def display_str(self, data: "DDRDataset") -> str:
-        return "Not implemented"
+        return str(self)
