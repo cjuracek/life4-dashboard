@@ -62,14 +62,19 @@ class DDRDataset:
             return Lamp.Clear
 
     def get_lamp(self, lamp: Lamp):
+        """Return all songs with a given lamp"""
         return self._data[self._data["Lamp"] == lamp]
 
     def get_level(self, level: int):
         return self._data.query("Level == @level")
 
     def get_level_lamp(self, level: int):
+        """Get lamp for a given level"""
         lamps = self.get_level(level=level)["Lamp"]
         return min(lamps)
+
+    def get_lamps_for_level(self, level: int):
+        return self.get_level(level=level)["Lamp"].to_list()
 
     def get_num_pfcs(self, level: int):
         diff_df = self.get_level(level)
@@ -90,6 +95,16 @@ class DDRDataset:
     def get_songs_below_threshold(self, level: int, threshold: int):
         level_songs = self.get_level(level)
         return level_songs[level_songs["Score"] < threshold]
+
+    def get_songs_above_threshold(self, level: int, threshold: int):
+        level_songs = self.get_level(level)
+        return level_songs[level_songs["Score"] >= threshold]
+
+    def get_songs_in_range(self, level: int, lower: int, upper: int):
+        level_songs = self.get_level(level)
+        return level_songs[
+            (level_songs["Score"] >= lower) & (level_songs["Score"] < upper)
+        ]
 
     def get_sdps(self):
         sdps = self._data[(self._data["Lamp"] == Lamp.Gold) & (self._data["Perf"] < 10)]

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Protocol
 
 
 from life4 import Life4RankEnum
@@ -12,8 +13,17 @@ class Requirement(ABC):
     def is_satisfied(self, data: "DDRDataset"):
         pass
 
+    @abstractmethod
+    def display_str(self, data: "DDRDataset") -> str:
+        pass
 
-class LampRequirement(Requirement):
+
+class ProgressDisplay(Protocol):
+    def get_progress(self) -> str:
+        ...
+
+
+class LampRequirement(Requirement, ProgressDisplay):
     """E.g. 'Red Lamp' (for a given difficulty)"""
 
     multiple_levels = False
@@ -25,12 +35,23 @@ class LampRequirement(Requirement):
     def __str__(self):
         return f"{self.lamp.name} Lamp"
 
+    def get_progress(self, data: "DDRDataset"):
+        lamps = data.get_lamps_for_level(self.level)
+        valid_lamps = [lamp for lamp in lamps if lamp >= self.lamp]
+        return f"{len(valid_lamps)}/{len(lamps)}"
+
+    def display_str(self, data: "DDRDataset") -> str:
+        str_to_display = str(self)
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
+
     def is_satisfied(self, data: "DDRDataset"):
         lamp = data.get_level_lamp(level=self.level)
         return lamp >= self.lamp
 
 
-class PFCRequirement(Requirement):
+class PFCRequirement(Requirement, ProgressDisplay):
     """E.g. 'PFC 56 14s'"""
 
     multiple_levels = False
@@ -39,11 +60,17 @@ class PFCRequirement(Requirement):
         self.level = level
         self.num_pfc = num
 
-    def __str__(self):
-        return f"PFC {self.num_pfc} {self.level}s"
-
     def is_satisfied(self, data: "DDRDataset"):
         return data.get_num_pfcs(self.level) >= self.num_pfc
+
+    def get_progress(self, data: "DDRDataset"):
+        return f"{data.get_num_pfcs(self.level)}/{self.num_pfc}"
+
+    def display_str(self, data: "DDRDataset") -> str:
+        str_to_display = f"PFC {self.num_pfc} {self.level}s"
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
 
 
 class AAARequirement(Requirement):
@@ -55,14 +82,20 @@ class AAARequirement(Requirement):
         self.level = level
         self.num_AAA = num
 
-    def __str__(self):
-        return f"AAA {self.num_AAA} {self.level}s"
-
     def is_satisfied(self, data: "DDRDataset"):
         return data.get_num_AAA(level=self.level) >= self.num_AAA
 
+    def get_progress(self, data: "DDRDataset"):
+        return f"{data.get_num_AAA(level=self.level)}/{self.num_AAA}"
 
-class ClearRequirement(Requirement):
+    def display_str(self, data: "DDRDataset") -> str:
+        str_to_display = f"AAA {self.num_AAA} {self.level}s"
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
+
+
+class ClearRequirement(Requirement, ProgressDisplay):
     """E.g. 'Clear 18 18s' and 'Clear 44 17s over 860k (12E, 810k)'"""
 
     multiple_levels = False
@@ -89,14 +122,14 @@ class ClearRequirement(Requirement):
             req_str += f" ({self.num_exceptions}E, {str(self.exception_floor)[:3]}k)"
         return req_str
 
-    def is_satisfied(self, data):
+    def _get_valid_scores(self, data) -> int:
         level_scores = data.get_level_scores(level=self.level, return_zero=False)
         if not self.floor:
-            return len(level_scores) >= self.num_required
+            return len(level_scores)
 
         scores_over_floor = [score for score in level_scores if score >= self.floor]
         if len(scores_over_floor) >= self.num_required:
-            return True
+            return len(scores_over_floor)
 
         exception_scores = [
             score
@@ -105,7 +138,19 @@ class ClearRequirement(Requirement):
         ]
         num_valid_exceptions = min(len(exception_scores), self.num_exceptions)
         total_valid_scores = len(scores_over_floor) + num_valid_exceptions
-        return total_valid_scores >= self.num_required
+        return total_valid_scores
+
+    def is_satisfied(self, data):
+        return self._get_valid_scores(data) >= self.num_required
+
+    def get_progress(self, data: "DDRDataset") -> str:
+        return f"{self._get_valid_scores(data)}/{self.num_required}"
+
+    def display_str(self, data: "DDRDataset") -> str:
+        str_to_display = str(self)
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
 
 
 class CeilingRequirement(Requirement):
@@ -123,8 +168,11 @@ class CeilingRequirement(Requirement):
     def is_satisfied(self, data: "DDRDataset"):
         return data.get_ceiling(level=self.level) >= self.ceiling
 
+    def display_str(self, data: "DDRDataset") -> str:
+        return str(self)
 
-class FloorRequirement(Requirement):
+
+class FloorRequirement(Requirement, ProgressDisplay):
     """E.g. 'All 16s over 920k'"""
 
     multiple_levels = False
@@ -162,8 +210,23 @@ class FloorRequirement(Requirement):
         )
         return len(songs_below_threshold) <= self.num_exceptions
 
+    def get_progress(self, data: "DDRDataset"):
+        total_songs = len(data.get_level(self.level))
+        songs_above_floor = len(data.get_songs_above_threshold(self.level, self.floor))
+        song_exceptions = data.get_songs_in_range(
+            level=self.level, lower=self.exception_floor, upper=self.floor
+        )
+        valid_exceptions = min(len(song_exceptions), self.num_exceptions)
+        return f"{songs_above_floor + valid_exceptions}/{total_songs}"
 
-class MAPointsRequirement(Requirement):
+    def display_str(self, data: "DDRDataset") -> str:
+        str_to_display = str(self)
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
+
+
+class MAPointsRequirement(Requirement, ProgressDisplay):
     """E.g. 'MA Points: 4'"""
 
     multiple_levels = True
@@ -176,6 +239,15 @@ class MAPointsRequirement(Requirement):
 
     def is_satisfied(self, data: "DDRDataset"):
         return data.get_ma_points() >= self.points_required
+
+    def get_progress(self, data: "DDRDataset"):
+        return f"{data.get_ma_points():.2f}/{self.points_required}"
+
+    def display_str(self, data: "DDRDataset") -> str:
+        str_to_display = str(self)
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
 
 
 class SDPRequirement(Requirement):
@@ -192,6 +264,9 @@ class SDPRequirement(Requirement):
     def is_satisfied(self, data: "DDRDataset"):
         return max(data.get_sdps()["Level"]) >= self.level
 
+    def display_str(self, data: "DDRDataset") -> str:
+        return str(self)
+
 
 class MFCRequirement(Requirement):
     """Requirement for getting an MFC at or above a given level"""
@@ -206,6 +281,9 @@ class MFCRequirement(Requirement):
 
     def is_satisfied(self, data: "DDRDataset"):
         return max(data.get_lamp(Lamp.White)["Level"]) >= self.level
+
+    def display_str(self, data: "DDRDataset") -> str:
+        return str(self)
 
 
 class TrialRequirement(Requirement):
@@ -222,3 +300,6 @@ class TrialRequirement(Requirement):
     def is_satisfied(self, data):
         valid_trials = [trial for trial in data.trials if trial.rank >= self.rank]
         return len(valid_trials) >= self.num
+
+    def display_str(self, data: "DDRDataset") -> str:
+        return str(self)
