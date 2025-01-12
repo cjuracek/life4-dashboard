@@ -82,14 +82,17 @@ class AAARequirement(Requirement):
         self.level = level
         self.num_AAA = num
 
-    def __str__(self):
-        return f"AAA {self.num_AAA} {self.level}s"
-
     def is_satisfied(self, data: "DDRDataset"):
         return data.get_num_AAA(level=self.level) >= self.num_AAA
 
+    def get_progress(self, data: "DDRDataset"):
+        return f"{data.get_num_AAA(level=self.level)}/{self.num_AAA}"
+
     def display_str(self, data: "DDRDataset") -> str:
-        return "Not implemented"
+        str_to_display = f"AAA {self.num_AAA} {self.level}s"
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
 
 
 class ClearRequirement(Requirement):
