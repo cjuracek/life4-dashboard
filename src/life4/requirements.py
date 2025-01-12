@@ -163,7 +163,7 @@ class CeilingRequirement(Requirement):
         return "Not implemented"
 
 
-class FloorRequirement(Requirement):
+class FloorRequirement(Requirement, ProgressDisplay):
     """E.g. 'All 16s over 920k'"""
 
     multiple_levels = False
@@ -201,8 +201,20 @@ class FloorRequirement(Requirement):
         )
         return len(songs_below_threshold) <= self.num_exceptions
 
+    def get_progress(self, data: "DDRDataset"):
+        total_songs = len(data.get_level(self.level))
+        songs_above_floor = len(data.get_songs_above_threshold(self.level, self.floor))
+        song_exceptions = data.get_songs_in_range(
+            level=self.level, lower=self.exception_floor, upper=self.floor
+        )
+        valid_exceptions = min(len(song_exceptions), self.num_exceptions)
+        return f"{songs_above_floor + valid_exceptions}/{total_songs}"
+
     def display_str(self, data: "DDRDataset") -> str:
-        return "Not implemented"
+        str_to_display = str(self)
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
 
 
 class MAPointsRequirement(Requirement, ProgressDisplay):
