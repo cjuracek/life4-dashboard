@@ -95,7 +95,7 @@ class AAARequirement(Requirement):
         return str_to_display
 
 
-class ClearRequirement(Requirement):
+class ClearRequirement(Requirement, ProgressDisplay):
     """E.g. 'Clear 18 18s' and 'Clear 44 17s over 860k (12E, 810k)'"""
 
     multiple_levels = False
@@ -122,14 +122,14 @@ class ClearRequirement(Requirement):
             req_str += f" ({self.num_exceptions}E, {str(self.exception_floor)[:3]}k)"
         return req_str
 
-    def is_satisfied(self, data):
+    def _get_valid_scores(self, data) -> int:
         level_scores = data.get_level_scores(level=self.level, return_zero=False)
         if not self.floor:
-            return len(level_scores) >= self.num_required
+            return len(level_scores)
 
         scores_over_floor = [score for score in level_scores if score >= self.floor]
         if len(scores_over_floor) >= self.num_required:
-            return True
+            return len(scores_over_floor)
 
         exception_scores = [
             score
@@ -138,10 +138,19 @@ class ClearRequirement(Requirement):
         ]
         num_valid_exceptions = min(len(exception_scores), self.num_exceptions)
         total_valid_scores = len(scores_over_floor) + num_valid_exceptions
-        return total_valid_scores >= self.num_required
+        return total_valid_scores
+
+    def is_satisfied(self, data):
+        return self._get_valid_scores(data) >= self.num_required
+
+    def get_progress(self, data: "DDRDataset") -> str:
+        return f"{self._get_valid_scores(data)}/{self.num_required}"
 
     def display_str(self, data: "DDRDataset") -> str:
-        return "Not implemented"
+        str_to_display = str(self)
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
 
 
 class CeilingRequirement(Requirement):
