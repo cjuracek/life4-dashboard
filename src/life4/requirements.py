@@ -205,7 +205,7 @@ class FloorRequirement(Requirement):
         return "Not implemented"
 
 
-class MAPointsRequirement(Requirement):
+class MAPointsRequirement(Requirement, ProgressDisplay):
     """E.g. 'MA Points: 4'"""
 
     multiple_levels = True
@@ -219,8 +219,14 @@ class MAPointsRequirement(Requirement):
     def is_satisfied(self, data: "DDRDataset"):
         return data.get_ma_points() >= self.points_required
 
+    def get_progress(self, data: "DDRDataset"):
+        return f"{data.get_ma_points():.2f}/{self.points_required}"
+
     def display_str(self, data: "DDRDataset") -> str:
-        return "Not implemented"
+        str_to_display = str(self)
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
 
 
 class SDPRequirement(Requirement):
