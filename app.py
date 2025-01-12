@@ -49,10 +49,7 @@ def main(data_source: dict):
 
     st.title("Life4 Dashboard")
 
-    rank_choice = st.selectbox(
-        "Select rank",
-        ("Pearl", "Amethyst"),
-    )
+    rank_choice = st.selectbox("Select rank", ("Pearl", "Amethyst"), index=0)
     if rank_choice == "Pearl":
         subranks = [pearl_1, pearl_2, pearl_3, pearl_4, pearl_5]
     else:
@@ -60,6 +57,7 @@ def main(data_source: dict):
 
     columns = st.columns(5)
     for rank, column in zip(subranks, columns):
+        column = column.empty()
         with column:
             rank_display = Life4RankDisplay(rank, data)
             rank_display.visualize()
