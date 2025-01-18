@@ -38,12 +38,20 @@ class DDRDataset:
 
         # Add lamp information
         self._data["Lamp"] = self._data.apply(func=self._get_lamp, axis=1)
+        self._validate_data()
 
         # Add trials information
         trials_df = data_source.load_trials()
         self.trials = [
             Life4Trial(**trial.to_dict()) for _, trial in trials_df.iterrows()
         ]
+
+    def _validate_data(self):
+        valid_levels = range(14, 20)
+        if not all(level in self._data["Level"].values for level in valid_levels):
+            raise ValueError(
+                "Missing 1 or more levels (14-19) in dataset. Check current data filtering"
+            )
 
     def _get_lamp(self, row) -> Lamp:
         if row["Score"] == 1_000_000:
