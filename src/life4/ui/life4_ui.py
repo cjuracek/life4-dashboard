@@ -53,7 +53,6 @@ class Life4RankDisplay:
                 if sub.is_satisfied(self.data)
             ]
         )
-        progress = f"{completed_requirements}/{total_requirements}"
         expander_title = f"**{self.life4_rank.rank.name} {self.life4_rank.subrank}**"
 
         status_emoji = (
@@ -63,6 +62,7 @@ class Life4RankDisplay:
         )
         expander_title += f" {status_emoji}"
 
+        progress = f"{completed_requirements}/{total_requirements}"
         expander_title += f"\n\n  • {progress} requirements completed\n\n  • {available_substitutions} substitutions available"
         with st.expander(expander_title, expanded=False):
             st.write("Requirements")
