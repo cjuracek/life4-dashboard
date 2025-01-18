@@ -47,7 +47,9 @@ def main(data_source: dict):
     data_source = data_source_factory(data_source)
     data = DDRDataset(data_source=data_source)
 
-    st.title("Life4 Dashboard")
+    _, cent_co, _ = st.columns(3)
+    with cent_co:
+        st.image("assets/life4-logo.png", width=10, use_container_width=True)
 
     rank_choice = st.selectbox("Select rank", ("Pearl", "Amethyst"), index=0)
     if rank_choice == "Pearl":
