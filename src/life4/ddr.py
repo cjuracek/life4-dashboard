@@ -1,3 +1,4 @@
+import logging
 from enum import IntEnum
 
 
@@ -23,7 +24,7 @@ class DDRDataset:
         filter_course_trials=True,
         filter_other=True,
     ):
-        print(f"Reading data from: {data_source}")
+        logging.info(f"Reading data from: {data_source}")
         self._data = data_source.load_scores()
         if filter_doubles:
             singles_diff = ["bSP", "BSP", "DSP", "ESP", "CSP"]  # noqa: F841
