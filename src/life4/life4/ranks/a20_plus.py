@@ -252,6 +252,8 @@ pearl_5 = Life4Rank(
     substitutions=pearl_substitutions,
 )
 
+pearl = [pearl_1, pearl_2, pearl_3, pearl_4, pearl_5]
+
 
 amethyst_substitutions = [
     # 15s
@@ -499,3 +501,5 @@ amethyst_5 = Life4Rank(
     ],
     substitutions=amethyst_substitutions,
 )
+
+amethyst = [amethyst_1, amethyst_2, amethyst_3, amethyst_4, amethyst_5]
