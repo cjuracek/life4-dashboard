@@ -3,8 +3,8 @@ from typing import List
 
 import streamlit as st
 
-from src.life4 import Life4Rank
-from src.life4.ddr import DDRDataset
+from life4.life4.core import Life4Rank
+from life4.ddr import DDRDataset
 
 
 class Life4RankDisplay:
@@ -41,7 +41,7 @@ class Life4RankDisplay:
         _ = [self.create_checkbox(req) for req in requirements if req.multiple_levels]
 
     def visualize(self):
-        """Visualize rank_requirements + substitutions as a series of Streamlit checkboxes in collapsible menu"""
+        """Visualize ranks + substitutions as a series of Streamlit checkboxes in collapsible menu"""
         completed_requirements = len(
             [req for req in self.life4_rank.requirements if req.is_satisfied(self.data)]
         )

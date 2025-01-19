@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Protocol
 
 
-from life4 import Life4RankEnum
+from life4.life4.core import Life4RankEnum
 from life4.ddr import Lamp
 
 
