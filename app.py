@@ -2,12 +2,12 @@ import sys
 
 sys.path.append("src")
 
-import click  # noqa: E402
-import streamlit as st  # noqa: E402
+import click
+import streamlit as st
 
-from life4.data.backends import GoogleSheetsDataSource, OnedriveDataSource  # noqa: E402
-from life4.ddr import DDRDataset  # noqa: E402
-from life4.life4.ranks.a20_plus import (  # noqa: E402  # noqa: E402
+from life4.data.backends import GoogleSheetsDataSource, OnedriveDataSource
+from life4.ddr import DDRDataset
+from life4.life4.ranks.a20_plus import (
     amethyst_1,
     amethyst_2,
     amethyst_3,
@@ -19,7 +19,7 @@ from life4.life4.ranks.a20_plus import (  # noqa: E402  # noqa: E402
     pearl_4,
     pearl_5,
 )
-from life4.life4_ui import Life4RankDisplay  # noqa: E402
+from life4.life4_ui import Life4RankDisplay
 
 st.set_page_config(layout="wide")
 
