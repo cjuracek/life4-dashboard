@@ -3,8 +3,8 @@ from typing import List
 
 import streamlit as st
 
-from life4.life4.core import Life4Rank
 from life4.ddr import DDRDataset
+from life4.life4.core import Life4Rank
 
 
 class Life4RankDisplay:

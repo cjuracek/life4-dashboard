@@ -1,5 +1,6 @@
-from life4.data.interfaces import ScoreTrialFetcher
 import pandas as pd
+
+from life4.data.interfaces import ScoreTrialFetcher
 
 
 class GoogleSheetsDataSource(ScoreTrialFetcher):

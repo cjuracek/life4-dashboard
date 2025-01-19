@@ -1,9 +1,8 @@
 import logging
 from enum import IntEnum
 
-
-from life4.life4.core import MFC_POINT_MAPPING, SDP_POINT_MAPPING, Life4Trial
 from life4.data.interfaces import ScoreTrialFetcher
+from life4.life4.core import MFC_POINT_MAPPING, SDP_POINT_MAPPING, Life4Trial
 
 
 class Lamp(IntEnum):
