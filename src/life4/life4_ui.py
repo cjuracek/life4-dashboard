@@ -5,6 +5,7 @@ import streamlit as st
 
 from life4.ddr import DDRDataset
 from life4.life4.core import Life4Rank
+from life4.life4.ranks.requirements import Requirement
 
 
 class Life4RankDisplay:
@@ -12,7 +13,7 @@ class Life4RankDisplay:
         self.life4_rank = life4_rank
         self.data = data
 
-    def create_checkbox(self, requirement: "Requirement"):
+    def create_checkbox(self, requirement: Requirement):
         st.checkbox(
             requirement.display_str(self.data),
             disabled=True,
@@ -20,7 +21,7 @@ class Life4RankDisplay:
             key=str(uuid.uuid4()),
         )
 
-    def _visualize_reqs(self, requirements: List["Requirement"]):
+    def _visualize_reqs(self, requirements: List[Requirement]):
         requirement_levels = range(14, 20)
         level_to_requirements = {
             level: [
