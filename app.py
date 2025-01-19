@@ -19,7 +19,7 @@ from life4.life4.ranks.a20_plus import (  # noqa: E402  # noqa: E402
     pearl_4,
     pearl_5,
 )
-from life4.ui.life4_ui import Life4RankDisplay  # noqa: E402
+from life4.life4_ui import Life4RankDisplay  # noqa: E402
 
 st.set_page_config(layout="wide")
 
