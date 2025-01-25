@@ -92,11 +92,6 @@ class DDRDataset:
         diff_df = self.get_level(level)
         return len(diff_df[diff_df["Score"] >= 990_000])
 
-    def get_num_clears(self, level: int):
-        lamps = self.get_level(level)["Lamp"]
-        num_clears = sum(x >= Lamp.Clear for x in lamps)
-        return num_clears
-
     def get_ceiling(self, level: int):
         return max(self.get_level(level)["Score"])
 
