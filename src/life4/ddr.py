@@ -1,9 +1,8 @@
 import logging
 from enum import IntEnum
 
-
-from life4 import MFC_POINT_MAPPING, SDP_POINT_MAPPING, Life4Trial
 from life4.data.interfaces import ScoreTrialFetcher
+from life4.life4.core import MFC_POINT_MAPPING, SDP_POINT_MAPPING, Life4Trial
 
 
 class Lamp(IntEnum):
@@ -92,11 +91,6 @@ class DDRDataset:
     def get_num_AAA(self, level: int):
         diff_df = self.get_level(level)
         return len(diff_df[diff_df["Score"] >= 990_000])
-
-    def get_num_clears(self, level: int):
-        lamps = self.get_level(level)["Lamp"]
-        num_clears = sum(x >= Lamp.Clear for x in lamps)
-        return num_clears
 
     def get_ceiling(self, level: int):
         return max(self.get_level(level)["Score"])

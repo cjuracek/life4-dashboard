@@ -2,26 +2,13 @@ import sys
 
 sys.path.append("src")
 
-import click  # noqa: E402
-import streamlit as st  # noqa: E402
-from life4.data.backends import OnedriveDataSource, GoogleSheetsDataSource  # noqa: E402
+import click
+import streamlit as st
 
-from life4.ddr import DDRDataset  # noqa: E402
-from life4.rank_requirements.a20_plus.pearl import (  # noqa: E402
-    pearl_1,
-    pearl_2,
-    pearl_3,
-    pearl_4,
-    pearl_5,
-)
-from life4.rank_requirements.a20_plus.amethyst import (  # noqa: E402
-    amethyst_1,
-    amethyst_2,
-    amethyst_3,
-    amethyst_4,
-    amethyst_5,
-)
-from life4.ui.life4_ui import Life4RankDisplay  # noqa: E402
+from life4.data.backends import GoogleSheetsDataSource, OnedriveDataSource
+from life4.ddr import DDRDataset
+from life4.life4.ranks.a20_plus import pearl, amethyst
+from life4.life4_ui import Life4RankDisplay
 
 st.set_page_config(layout="wide")
 
@@ -52,16 +39,13 @@ def main(data_source: dict):
         st.image("assets/life4-logo.png", width=10, use_container_width=True)
 
     rank_choice = st.selectbox("Select rank", ("Pearl", "Amethyst"), index=0)
-    if rank_choice == "Pearl":
-        subranks = [pearl_1, pearl_2, pearl_3, pearl_4, pearl_5]
-    else:
-        subranks = [amethyst_1, amethyst_2, amethyst_3, amethyst_4, amethyst_5]
+    rank = pearl if rank_choice == "Pearl" else amethyst
 
     columns = st.columns(5)
-    for rank, column in zip(subranks, columns):
+    for sub_rank, column in zip(rank, columns):
         column = column.empty()
         with column:
-            rank_display = Life4RankDisplay(rank, data)
+            rank_display = Life4RankDisplay(sub_rank, data)
             rank_display.visualize()
 
 
