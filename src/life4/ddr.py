@@ -93,7 +93,7 @@ class DDRDataset:
         return len(diff_df[diff_df["Score"] >= 990_000])
 
     def get_ceiling(self, level: int):
-        return max(self.get_level(level)["Score"])
+        return self.get_level(level)["Score"].max()
 
     def get_songs_below_threshold(self, level: int, threshold: int):
         level_songs = self.get_level(level)
