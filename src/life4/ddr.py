@@ -22,6 +22,7 @@ class DDRDataset:
         filter_doubles=True,
         filter_course_trials=True,
         filter_other=True,
+        filter_removed=True,
     ):
         logging.info(f"Reading data from: {data_source}")
         self._data = data_source.load_scores()
@@ -34,6 +35,9 @@ class DDRDataset:
 
         if filter_other:
             self._data = self._data.query("Availability != 'Other'")
+
+        if filter_removed:
+            self._data = self._data.query("Availability != 'removed'")
 
         # Add lamp information
         self._data["Lamp"] = self._data.apply(func=self._get_lamp, axis=1)
