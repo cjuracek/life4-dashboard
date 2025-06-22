@@ -398,9 +398,9 @@ amethyst_3 = Life4Rank(
         ClearRequirement(
             level=18, num=36, floor=830_000, num_exceptions=16, exception_floor=780_000
         ),
-        FloorRequirement(level=18, floor=980_000),
+        CeilingRequirement(level=18, ceiling=980_000),
         # 19s
-        FloorRequirement(level=19, floor=760_000),
+        CeilingRequirement(level=19, ceiling=760_000),
         # Other
         MAPointsRequirement(points=16),
         SDPRequirement(level=10),
@@ -444,9 +444,9 @@ amethyst_4 = Life4Rank(
         ClearRequirement(
             level=18, num=38, floor=840_000, num_exceptions=18, exception_floor=790_000
         ),
-        FloorRequirement(level=18, floor=985_000),
+        CeilingRequirement(level=18, ceiling=985_000),
         # 19s
-        FloorRequirement(level=19, floor=780_000),
+        CeilingRequirement(level=19, ceiling=780_000),
         # Other
         MAPointsRequirement(points=18),
         SDPRequirement(level=10),
