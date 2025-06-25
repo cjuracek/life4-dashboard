@@ -371,7 +371,7 @@ amethyst_3 = Life4Rank(
         # 14s
         LampRequirement(level=14, lamp=Lamp.Blue),
         FloorRequirement(
-            level=14, floor=993_000, num_exceptions=2, exception_floor=985_000
+            level=14, floor=993_000, num_exceptions=3, exception_floor=985_000
         ),
         PFCRequirement(level=14, num=104),
         # 15s
