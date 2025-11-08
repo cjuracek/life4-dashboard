@@ -503,3 +503,82 @@ amethyst_5 = Life4Rank(
 )
 
 amethyst = [amethyst_1, amethyst_2, amethyst_3, amethyst_4, amethyst_5]
+
+
+emerald_substitutions = [
+    # 14s
+    FloorRequirement(level=14, floor=999_700),
+    # 15s
+    FloorRequirement(level=15, floor=999_550),
+    # 16s
+    LampRequirement(level=16, lamp=Lamp.Green),
+    FloorRequirement(level=16, floor=995_000),
+    PFCRequirement(level=16, num=75),
+    # 17s
+    LampRequirement(level=17, lamp=Lamp.Blue),
+    FloorRequirement(
+        level=17, floor=990_000, num_exceptions=5, exception_floor=975_000
+    ),
+    PFCRequirement(level=17, num=30),
+    # 18s
+    FloorRequirement(
+        level=18, floor=950_000, num_exceptions=10, exception_floor=900_000
+    ),
+    PFCRequirement(level=18, num=1),
+    AAARequirement(level=18, num=20),
+    # 19s
+    FloorRequirement(
+        level=19, floor=850_000, num_exceptions=2, exception_floor=800_000
+    ),
+    CeilingRequirement(level=19, ceiling=900_000),
+    # Other
+    MFCRequirement(level=13),
+]
+
+emerald_1 = Life4Rank(
+    rank=Life4RankEnum.Emerald,
+    subrank=1,
+    requirements=[
+        # 14s
+        LampRequirement(level=14, lamp=Lamp.Green),
+        FloorRequirement(level=14, floor=996_000),
+        PFCRequirement(level=14, num=125),
+        # 15s
+        LampRequirement(level=15, lamp=Lamp.Blue),
+        FloorRequirement(
+            level=15, floor=991_000, num_exceptions=4, exception_floor=980_000
+        ),
+        PFCRequirement(level=15, num=86),
+        # 16s
+        LampRequirement(level=16, lamp=Lamp.Red),
+        FloorRequirement(
+            level=16, floor=980_000, num_exceptions=9, exception_floor=955_000
+        ),
+        PFCRequirement(level=16, num=36),
+        AAARequirement(level=16, num=84),
+        # 17s
+        LampRequirement(level=17, lamp=Lamp.Clear),
+        FloorRequirement(
+            level=17, floor=955_000, num_exceptions=14, exception_floor=910_000
+        ),
+        PFCRequirement(level=17, num=2),
+        AAARequirement(level=17, num=24),
+        # 18s
+        LampRequirement(level=18, lamp=Lamp.Clear),
+        FloorRequirement(
+            level=18, floor=860_000, num_exceptions=19, exception_floor=810_000
+        ),
+        AAARequirement(level=18, num=2),
+        # 19s
+        ClearRequirement(level=19, num=2, floor=720_000),
+        CeilingRequirement(level=19, ceiling=810_000),
+        # Other
+        MAPointsRequirement(points=22),
+        SDPRequirement(level=11),
+        MFCRequirement(level=9),
+        TrialRequirement(rank=Life4RankEnum.Amethyst, num=1),
+    ],
+    substitutions=emerald_substitutions,
+)
+
+emerald = [emerald_1]
