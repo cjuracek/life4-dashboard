@@ -5,10 +5,13 @@ from life4.life4.ranks.requirements import (
     CeilingRequirement,
     ClearRequirement,
     FloorRequirement,
+    LampFloorRequirement,
     LampRequirement,
     MAPointsRequirement,
+    MFCCountRequirement,
     MFCRequirement,
     PFCRequirement,
+    SDPCountRequirement,
     SDPRequirement,
     TrialRequirement,
 )
@@ -255,21 +258,45 @@ pearl_5 = Life4Rank(
 pearl = [pearl_1, pearl_2, pearl_3, pearl_4, pearl_5]
 
 
-amethyst_substitutions = [
-    # 15s
-    LampRequirement(level=15, lamp=Lamp.Green),
-    # 16s
-    LampRequirement(level=16, lamp=Lamp.Blue),
-    # 17s
-    LampRequirement(level=17, lamp=Lamp.Red),
-    # 18s
-    FloorRequirement(
-        level=18, floor=900_000, num_exceptions=15, exception_floor=850_000
+amethyst_1_substitutions = [
+    # 14s
+    LampFloorRequirement(
+        level=14,
+        lamp=Lamp.Green,
+        floor=996_000,
+        num_exceptions=9,
+        exception_floor=991_000,
     ),
+    PFCRequirement(level=14, num=105),
+    # 15s
+    PFCRequirement(level=15, num=56),
+    # 16s
+    LampFloorRequirement(
+        level=16,
+        lamp=Lamp.Red,
+        floor=980_000,
+        num_exceptions=10,
+        exception_floor=955_000,
+    ),
+    PFCRequirement(level=16, num=24),
+    AAARequirement(level=16, num=67),
+    # 17s
+    LampFloorRequirement(
+        level=17,
+        lamp=Lamp.Clear,
+        floor=955_000,
+        num_exceptions=14,
+        exception_floor=910_000,
+    ),
+    PFCRequirement(level=17, num=1),
+    AAARequirement(level=17, num=26),
+    # 18s
+    AAARequirement(level=18, num=2),
     # 19s
-    CeilingRequirement(level=19, ceiling=850_000),
+    CeilingRequirement(level=19, ceiling=700_000),
     # Other
     MFCRequirement(level=11),
+    SDPRequirement(level=14),
 ]
 
 amethyst_1 = Life4Rank(
@@ -277,91 +304,282 @@ amethyst_1 = Life4Rank(
     subrank=1,
     requirements=[
         # 14s
-        LampRequirement(level=14, lamp=Lamp.Blue),
-        FloorRequirement(
-            level=14, floor=991_000, num_exceptions=4, exception_floor=980_000
+        LampFloorRequirement(
+            level=14,
+            lamp=Lamp.Blue,
+            floor=991_000,
+            num_exceptions=9,
+            exception_floor=980_000,
         ),
-        PFCRequirement(level=14, num=88),
+        PFCRequirement(level=14, num=60),
         # 15s
-        LampRequirement(level=15, lamp=Lamp.Red),
-        FloorRequirement(
-            level=15, floor=980_000, num_exceptions=9, exception_floor=955_000
+        LampFloorRequirement(
+            level=15,
+            lamp=Lamp.Red,
+            floor=980_000,
+            num_exceptions=10,
+            exception_floor=955_000,
         ),
-        PFCRequirement(level=15, num=48),
-        AAARequirement(level=15, num=106),
+        PFCRequirement(level=15, num=26),
+        AAARequirement(level=15, num=105),
         # 16s
-        LampRequirement(level=16, lamp=Lamp.Clear),
-        FloorRequirement(
-            level=16, floor=955_000, num_exceptions=14, exception_floor=910_000
+        LampFloorRequirement(
+            level=16,
+            lamp=Lamp.Clear,
+            floor=955_000,
+            num_exceptions=14,
+            exception_floor=910_000,
         ),
-        PFCRequirement(level=16, num=14),
-        AAARequirement(level=16, num=48),
+        PFCRequirement(level=16, num=8),
+        AAARequirement(level=16, num=44),
         # 17s
-        LampRequirement(level=17, lamp=Lamp.Clear),
-        FloorRequirement(
-            level=17, floor=910_000, num_exceptions=19, exception_floor=860_000
+        LampFloorRequirement(
+            level=17,
+            lamp=Lamp.Clear,
+            floor=910_000,
+            num_exceptions=19,
+            exception_floor=860_000,
         ),
         AAARequirement(level=17, num=12),
         # 18s
         ClearRequirement(
-            level=18, num=32, floor=810_000, num_exceptions=12, exception_floor=760_000
+            level=18,
+            num=22,
+            floor=810_000,
+            num_exceptions=6,
+            exception_floor=760_000,
         ),
         CeilingRequirement(level=18, ceiling=960_000),
-        # 19s
-        CeilingRequirement(level=19, ceiling=720_000),
         # Other
-        MAPointsRequirement(points=12),
-        SDPRequirement(level=9),
         MFCRequirement(level=6),
-        TrialRequirement(rank=Life4RankEnum.Pearl, num=1),
+        SDPRequirement(level=13),
+        MAPointsRequirement(points=6),
+        TrialRequirement(rank=Life4RankEnum.Topaz, num=1),
     ],
-    substitutions=amethyst_substitutions,
+    substitutions=amethyst_1_substitutions,
 )
+
+amethyst_2_substitutions = [
+    # 14s
+    LampFloorRequirement(
+        level=14,
+        lamp=Lamp.Green,
+        floor=997_000,
+        num_exceptions=5,
+        exception_floor=992_000,
+    ),
+    PFCRequirement(level=14, num=110),
+    # 15s
+    PFCRequirement(level=15, num=62),
+    # 16s
+    LampFloorRequirement(
+        level=16,
+        lamp=Lamp.Red,
+        floor=982_000,
+        num_exceptions=10,
+        exception_floor=960_000,
+    ),
+    PFCRequirement(level=16, num=28),
+    AAARequirement(level=16, num=74),
+    # 17s
+    LampFloorRequirement(
+        level=17,
+        lamp=Lamp.Clear,
+        floor=960_000,
+        num_exceptions=13,
+        exception_floor=920_000,
+    ),
+    PFCRequirement(level=17, num=2),
+    AAARequirement(level=17, num=32),
+    # 18s
+    AAARequirement(level=18, num=4),
+    # 19s
+    CeilingRequirement(level=19, ceiling=750_000),
+    # Other
+    MFCCountRequirement(level=11, num=3),
+    SDPCountRequirement(level=14, num=2),
+]
+
+amethyst_3_substitutions = [
+    # 14s
+    LampFloorRequirement(
+        level=14,
+        lamp=Lamp.Green,
+        floor=998_000,
+        num_exceptions=5,
+        exception_floor=993_000,
+    ),
+    PFCRequirement(level=14, num=115),
+    # 15s
+    PFCRequirement(level=15, num=68),
+    # 16s
+    LampFloorRequirement(
+        level=16,
+        lamp=Lamp.Red,
+        floor=985_000,
+        num_exceptions=10,
+        exception_floor=965_000,
+    ),
+    PFCRequirement(level=16, num=32),
+    AAARequirement(level=16, num=81),
+    # 17s
+    LampFloorRequirement(
+        level=17,
+        lamp=Lamp.Clear,
+        floor=965_000,
+        num_exceptions=12,
+        exception_floor=930_000,
+    ),
+    PFCRequirement(level=17, num=3),
+    AAARequirement(level=17, num=38),
+    # 18s
+    AAARequirement(level=18, num=6),
+    # 19s
+    CeilingRequirement(level=19, ceiling=800_000),
+    # Other
+    MFCRequirement(level=12),
+    SDPCountRequirement(level=14, num=3),
+]
+
+amethyst_4_substitutions = [
+    # 14s
+    LampFloorRequirement(
+        level=14,
+        lamp=Lamp.Green,
+        floor=998_500,
+        num_exceptions=5,
+        exception_floor=994_000,
+    ),
+    PFCRequirement(level=14, num=120),
+    # 15s
+    PFCRequirement(level=15, num=74),
+    # 16s
+    LampFloorRequirement(
+        level=16,
+        lamp=Lamp.Red,
+        floor=987_000,
+        num_exceptions=10,
+        exception_floor=970_000,
+    ),
+    PFCRequirement(level=16, num=36),
+    AAARequirement(level=16, num=88),
+    # 17s
+    LampFloorRequirement(
+        level=17,
+        lamp=Lamp.Clear,
+        floor=970_000,
+        num_exceptions=11,
+        exception_floor=940_000,
+    ),
+    PFCRequirement(level=17, num=4),
+    AAARequirement(level=17, num=44),
+    # 18s
+    AAARequirement(level=18, num=8),
+    # 19s
+    CeilingRequirement(level=19, ceiling=850_000),
+    # Other
+    MFCCountRequirement(level=12, num=2),
+    SDPCountRequirement(level=14, num=4),
+]
+
+amethyst_5_substitutions = [
+    # 14s
+    LampFloorRequirement(
+        level=14,
+        lamp=Lamp.Green,
+        floor=999_000,
+        num_exceptions=5,
+        exception_floor=995_000,
+    ),
+    PFCRequirement(level=14, num=125),
+    # 15s
+    PFCRequirement(level=15, num=80),
+    # 16s
+    LampFloorRequirement(
+        level=16,
+        lamp=Lamp.Red,
+        floor=990_000,
+        num_exceptions=10,
+        exception_floor=975_000,
+    ),
+    PFCRequirement(level=16, num=40),
+    # 17s
+    LampFloorRequirement(
+        level=17,
+        lamp=Lamp.Clear,
+        floor=975_000,
+        num_exceptions=10,
+        exception_floor=950_000,
+    ),
+    PFCRequirement(level=17, num=5),
+    AAARequirement(level=17, num=50),
+    # 18s
+    AAARequirement(level=18, num=10),
+    # 19s
+    CeilingRequirement(level=19, ceiling=900_000),
+    # Other
+    MFCCountRequirement(level=12, num=5),
+    SDPCountRequirement(level=14, num=5),
+]
 
 amethyst_2 = Life4Rank(
     rank=Life4RankEnum.Amethyst,
     subrank=2,
     requirements=[
         # 14s
-        LampRequirement(level=14, lamp=Lamp.Blue),
-        FloorRequirement(
-            level=14, floor=992_000, num_exceptions=3, exception_floor=982_000
+        LampFloorRequirement(
+            level=14,
+            lamp=Lamp.Blue,
+            floor=992_000,
+            num_exceptions=8,
+            exception_floor=982_000,
         ),
-        PFCRequirement(level=14, num=96),
+        PFCRequirement(level=14, num=70),
         # 15s
-        LampRequirement(level=15, lamp=Lamp.Red),
-        FloorRequirement(
-            level=15, floor=982_000, num_exceptions=8, exception_floor=960_000
+        LampFloorRequirement(
+            level=15,
+            lamp=Lamp.Red,
+            floor=982_000,
+            num_exceptions=10,
+            exception_floor=960_000,
         ),
-        PFCRequirement(level=15, num=56),
-        AAARequirement(level=15, num=112),
+        PFCRequirement(level=15, num=32),
+        AAARequirement(level=15, num=110),
         # 16s
-        LampRequirement(level=16, lamp=Lamp.Clear),
-        FloorRequirement(
-            level=16, floor=960_000, num_exceptions=13, exception_floor=920_000
+        LampFloorRequirement(
+            level=16,
+            lamp=Lamp.Clear,
+            floor=960_000,
+            num_exceptions=13,
+            exception_floor=920_000,
         ),
-        PFCRequirement(level=16, num=18),
-        AAARequirement(level=16, num=56),
+        PFCRequirement(level=16, num=11),
+        AAARequirement(level=16, num=48),
         # 17s
-        LampRequirement(level=17, lamp=Lamp.Clear),
-        FloorRequirement(
-            level=17, floor=920_000, num_exceptions=18, exception_floor=870_000
+        LampFloorRequirement(
+            level=17,
+            lamp=Lamp.Clear,
+            floor=920_000,
+            num_exceptions=18,
+            exception_floor=870_000,
         ),
         AAARequirement(level=17, num=14),
         # 18s
         ClearRequirement(
-            level=18, num=34, floor=820_000, num_exceptions=14, exception_floor=770_000
+            level=18,
+            num=24,
+            floor=820_000,
+            num_exceptions=7,
+            exception_floor=770_000,
         ),
         CeilingRequirement(level=18, ceiling=970_000),
-        # 19s
-        CeilingRequirement(level=19, ceiling=740_000),
         # Other
-        MAPointsRequirement(points=14),
-        SDPRequirement(level=9),
         MFCRequirement(level=7),
-        TrialRequirement(rank=Life4RankEnum.Pearl, num=1),
+        SDPCountRequirement(level=13, num=2),
+        MAPointsRequirement(points=7),
+        TrialRequirement(rank=Life4RankEnum.Topaz, num=1),
     ],
-    substitutions=amethyst_substitutions,
+    substitutions=amethyst_2_substitutions,
 )
 
 amethyst_3 = Life4Rank(
@@ -369,45 +587,59 @@ amethyst_3 = Life4Rank(
     subrank=3,
     requirements=[
         # 14s
-        LampRequirement(level=14, lamp=Lamp.Blue),
-        FloorRequirement(
-            level=14, floor=993_000, num_exceptions=3, exception_floor=985_000
+        LampFloorRequirement(
+            level=14,
+            lamp=Lamp.Blue,
+            floor=993_000,
+            num_exceptions=7,
+            exception_floor=985_000,
         ),
-        PFCRequirement(level=14, num=104),
+        PFCRequirement(level=14, num=80),
         # 15s
-        LampRequirement(level=15, lamp=Lamp.Red),
-        FloorRequirement(
-            level=15, floor=985_000, num_exceptions=7, exception_floor=965_000
+        LampFloorRequirement(
+            level=15,
+            lamp=Lamp.Red,
+            floor=985_000,
+            num_exceptions=10,
+            exception_floor=965_000,
         ),
-        PFCRequirement(level=15, num=64),
-        AAARequirement(level=15, num=118),
+        PFCRequirement(level=15, num=38),
+        AAARequirement(level=15, num=115),
         # 16s
-        LampRequirement(level=16, lamp=Lamp.Clear),
-        FloorRequirement(
-            level=16, floor=965_000, num_exceptions=12, exception_floor=930_000
+        LampFloorRequirement(
+            level=16,
+            lamp=Lamp.Clear,
+            floor=965_000,
+            num_exceptions=12,
+            exception_floor=930_000,
         ),
-        PFCRequirement(level=16, num=22),
-        AAARequirement(level=16, num=64),
+        PFCRequirement(level=16, num=14),
+        AAARequirement(level=16, num=52),
         # 17s
-        LampRequirement(level=17, lamp=Lamp.Clear),
-        FloorRequirement(
-            level=17, floor=930_000, num_exceptions=17, exception_floor=880_000
+        LampFloorRequirement(
+            level=17,
+            lamp=Lamp.Clear,
+            floor=930_000,
+            num_exceptions=17,
+            exception_floor=880_000,
         ),
         AAARequirement(level=17, num=16),
         # 18s
         ClearRequirement(
-            level=18, num=36, floor=830_000, num_exceptions=16, exception_floor=780_000
+            level=18,
+            num=26,
+            floor=830_000,
+            num_exceptions=8,
+            exception_floor=780_000,
         ),
         CeilingRequirement(level=18, ceiling=980_000),
-        # 19s
-        CeilingRequirement(level=19, ceiling=760_000),
         # Other
-        MAPointsRequirement(points=16),
-        SDPRequirement(level=10),
-        MFCRequirement(level=7),
-        TrialRequirement(rank=Life4RankEnum.Pearl, num=2),
+        MFCRequirement(level=8),
+        SDPCountRequirement(level=13, num=3),
+        MAPointsRequirement(points=8),
+        TrialRequirement(rank=Life4RankEnum.Topaz, num=2),
     ],
-    substitutions=amethyst_substitutions,
+    substitutions=amethyst_3_substitutions,
 )
 
 amethyst_4 = Life4Rank(
@@ -415,45 +647,59 @@ amethyst_4 = Life4Rank(
     subrank=4,
     requirements=[
         # 14s
-        LampRequirement(level=14, lamp=Lamp.Blue),
-        FloorRequirement(
-            level=14, floor=994_000, num_exceptions=1, exception_floor=987_000
+        LampFloorRequirement(
+            level=14,
+            lamp=Lamp.Blue,
+            floor=994_000,
+            num_exceptions=6,
+            exception_floor=987_000,
         ),
-        PFCRequirement(level=14, num=112),
+        PFCRequirement(level=14, num=90),
         # 15s
-        LampRequirement(level=15, lamp=Lamp.Red),
-        FloorRequirement(
-            level=15, floor=987_000, num_exceptions=6, exception_floor=970_000
+        LampFloorRequirement(
+            level=15,
+            lamp=Lamp.Red,
+            floor=987_000,
+            num_exceptions=10,
+            exception_floor=970_000,
         ),
-        PFCRequirement(level=15, num=72),
-        AAARequirement(level=15, num=124),
+        PFCRequirement(level=15, num=44),
+        AAARequirement(level=15, num=120),
         # 16s
-        LampRequirement(level=16, lamp=Lamp.Clear),
-        FloorRequirement(
-            level=16, floor=970_000, num_exceptions=11, exception_floor=940_000
+        LampFloorRequirement(
+            level=16,
+            lamp=Lamp.Clear,
+            floor=970_000,
+            num_exceptions=11,
+            exception_floor=940_000,
         ),
-        PFCRequirement(level=16, num=26),
-        AAARequirement(level=16, num=72),
+        PFCRequirement(level=16, num=17),
+        AAARequirement(level=16, num=56),
         # 17s
-        LampRequirement(level=17, lamp=Lamp.Clear),
-        FloorRequirement(
-            level=17, floor=940_000, num_exceptions=16, exception_floor=890_000
+        LampFloorRequirement(
+            level=17,
+            lamp=Lamp.Clear,
+            floor=940_000,
+            num_exceptions=16,
+            exception_floor=890_000,
         ),
         AAARequirement(level=17, num=18),
         # 18s
         ClearRequirement(
-            level=18, num=38, floor=840_000, num_exceptions=18, exception_floor=790_000
+            level=18,
+            num=28,
+            floor=840_000,
+            num_exceptions=9,
+            exception_floor=790_000,
         ),
         CeilingRequirement(level=18, ceiling=985_000),
-        # 19s
-        CeilingRequirement(level=19, ceiling=780_000),
         # Other
-        MAPointsRequirement(points=18),
-        SDPRequirement(level=10),
-        MFCRequirement(level=8),
-        TrialRequirement(rank=Life4RankEnum.Pearl, num=2),
+        MFCRequirement(level=9),
+        SDPCountRequirement(level=13, num=4),
+        MAPointsRequirement(points=9),
+        TrialRequirement(rank=Life4RankEnum.Topaz, num=2),
     ],
-    substitutions=amethyst_substitutions,
+    substitutions=amethyst_4_substitutions,
 )
 
 amethyst_5 = Life4Rank(
@@ -461,78 +707,99 @@ amethyst_5 = Life4Rank(
     subrank=5,
     requirements=[
         # 14s
-        LampRequirement(level=14, lamp=Lamp.Green),
-        FloorRequirement(level=14, floor=995_000),
-        PFCRequirement(level=14, num=120),
+        LampFloorRequirement(
+            level=14,
+            lamp=Lamp.Blue,
+            floor=995_000,
+            num_exceptions=5,
+            exception_floor=990_000,
+        ),
+        PFCRequirement(level=14, num=100),
         # 15s
-        LampRequirement(level=15, lamp=Lamp.Blue),
-        FloorRequirement(
-            level=15, floor=990_000, num_exceptions=5, exception_floor=975_000
+        LampFloorRequirement(
+            level=15,
+            lamp=Lamp.Red,
+            floor=990_000,
+            num_exceptions=10,
+            exception_floor=975_000,
         ),
-        PFCRequirement(level=15, num=80),
+        PFCRequirement(level=15, num=50),
         # 16s
-        LampRequirement(level=16, lamp=Lamp.Red),
-        FloorRequirement(
-            level=16, floor=975_000, num_exceptions=10, exception_floor=950_000
+        LampFloorRequirement(
+            level=16,
+            lamp=Lamp.Clear,
+            floor=975_000,
+            num_exceptions=10,
+            exception_floor=950_000,
         ),
-        PFCRequirement(level=16, num=30),
-        AAARequirement(level=16, num=80),
+        PFCRequirement(level=16, num=20),
+        AAARequirement(level=16, num=60),
         # 17s
-        LampRequirement(level=17, lamp=Lamp.Clear),
-        FloorRequirement(
-            level=17, floor=950_000, num_exceptions=15, exception_floor=900_000
+        LampFloorRequirement(
+            level=17,
+            lamp=Lamp.Clear,
+            floor=950_000,
+            num_exceptions=15,
+            exception_floor=900_000,
         ),
-        PFCRequirement(level=17, num=1),
         AAARequirement(level=17, num=20),
         # 18s
-        LampRequirement(level=18, lamp=Lamp.Clear),
-        FloorRequirement(
-            level=18, floor=850_000, num_exceptions=20, exception_floor=800_000
+        ClearRequirement(
+            level=18,
+            num=30,
+            floor=850_000,
+            num_exceptions=10,
+            exception_floor=800_000,
         ),
         AAARequirement(level=18, num=1),
-        # 19s
-        ClearRequirement(level=19, num=1),
-        CeilingRequirement(level=19, ceiling=800_000),
         # Other
-        MAPointsRequirement(points=20),
-        SDPRequirement(level=11),
-        MFCRequirement(level=8),
+        MFCRequirement(level=10),
+        SDPCountRequirement(level=13, num=5),
+        MAPointsRequirement(points=10),
         TrialRequirement(rank=Life4RankEnum.Amethyst, num=1),
     ],
-    substitutions=amethyst_substitutions,
+    substitutions=amethyst_5_substitutions,
 )
 
 amethyst = [amethyst_1, amethyst_2, amethyst_3, amethyst_4, amethyst_5]
 
 
-emerald_substitutions = [
+emerald_1_substitutions = [
     # 14s
-    FloorRequirement(level=14, floor=999_700),
-    # 15s
-    FloorRequirement(level=15, floor=999_550),
-    # 16s
-    LampRequirement(level=16, lamp=Lamp.Green),
-    FloorRequirement(level=16, floor=995_000),
-    PFCRequirement(level=16, num=75),
-    # 17s
-    LampRequirement(level=17, lamp=Lamp.Blue),
     FloorRequirement(
-        level=17, floor=990_000, num_exceptions=5, exception_floor=975_000
+        level=14, floor=999_500, num_exceptions=4, exception_floor=996_000
     ),
-    PFCRequirement(level=17, num=30),
+    # 15s
+    PFCRequirement(level=15, num=88),
+    # 16s
+    LampFloorRequirement(
+        level=16,
+        lamp=Lamp.Red,
+        floor=991_000,
+        num_exceptions=9,
+        exception_floor=980_000,
+    ),
+    PFCRequirement(level=16, num=44),
+    # 17s
+    LampFloorRequirement(
+        level=17,
+        lamp=Lamp.Clear,
+        floor=980_000,
+        num_exceptions=10,
+        exception_floor=955_000,
+    ),
+    PFCRequirement(level=17, num=8),
+    AAARequirement(level=17, num=60),
     # 18s
     FloorRequirement(
-        level=18, floor=950_000, num_exceptions=10, exception_floor=900_000
+        level=18, floor=910_000, num_exceptions=19, exception_floor=860_000
     ),
-    PFCRequirement(level=18, num=1),
-    AAARequirement(level=18, num=20),
+    AAARequirement(level=18, num=12),
     # 19s
-    FloorRequirement(
-        level=19, floor=850_000, num_exceptions=2, exception_floor=800_000
-    ),
-    CeilingRequirement(level=19, ceiling=900_000),
+    FloorRequirement(level=19, floor=910_000),
     # Other
     MFCRequirement(level=13),
+    SDPRequirement(level=15),
 ]
 
 emerald_1 = Life4Rank(
@@ -540,45 +807,54 @@ emerald_1 = Life4Rank(
     subrank=1,
     requirements=[
         # 14s
-        LampRequirement(level=14, lamp=Lamp.Green),
-        FloorRequirement(level=14, floor=996_000),
-        PFCRequirement(level=14, num=125),
+        LampFloorRequirement(
+            level=14,
+            lamp=Lamp.Green,
+            floor=996_000,
+            num_exceptions=9,
+            exception_floor=991_000,
+        ),
+        PFCRequirement(level=14, num=105),
         # 15s
-        LampRequirement(level=15, lamp=Lamp.Blue),
-        FloorRequirement(
-            level=15, floor=991_000, num_exceptions=4, exception_floor=980_000
+        LampFloorRequirement(
+            level=15,
+            lamp=Lamp.Red,
+            floor=991_000,
+            num_exceptions=9,
+            exception_floor=980_000,
         ),
-        PFCRequirement(level=15, num=86),
+        PFCRequirement(level=15, num=56),
         # 16s
-        LampRequirement(level=16, lamp=Lamp.Red),
-        FloorRequirement(
-            level=16, floor=980_000, num_exceptions=9, exception_floor=955_000
+        LampFloorRequirement(
+            level=16,
+            lamp=Lamp.Clear,
+            floor=980_000,
+            num_exceptions=10,
+            exception_floor=955_000,
         ),
-        PFCRequirement(level=16, num=36),
-        AAARequirement(level=16, num=84),
+        PFCRequirement(level=16, num=24),
+        AAARequirement(level=16, num=67),
         # 17s
-        LampRequirement(level=17, lamp=Lamp.Clear),
         FloorRequirement(
             level=17, floor=955_000, num_exceptions=14, exception_floor=910_000
         ),
-        PFCRequirement(level=17, num=2),
-        AAARequirement(level=17, num=24),
+        PFCRequirement(level=17, num=1),
+        AAARequirement(level=17, num=26),
         # 18s
-        LampRequirement(level=18, lamp=Lamp.Clear),
-        FloorRequirement(
-            level=18, floor=860_000, num_exceptions=19, exception_floor=810_000
+        ClearRequirement(
+            level=18, num=32, floor=860_000, num_exceptions=12, exception_floor=810_000
         ),
         AAARequirement(level=18, num=2),
         # 19s
-        ClearRequirement(level=19, num=2, floor=720_000),
-        CeilingRequirement(level=19, ceiling=810_000),
+        ClearRequirement(level=19, num=1, floor=700_000),
+        CeilingRequirement(level=19, ceiling=700_000),
         # Other
-        MAPointsRequirement(points=22),
-        SDPRequirement(level=11),
-        MFCRequirement(level=9),
+        MFCRequirement(level=11),
+        SDPRequirement(level=14),
+        MAPointsRequirement(points=12),
         TrialRequirement(rank=Life4RankEnum.Amethyst, num=1),
     ],
-    substitutions=emerald_substitutions,
+    substitutions=emerald_1_substitutions,
 )
 
 emerald = [emerald_1]
