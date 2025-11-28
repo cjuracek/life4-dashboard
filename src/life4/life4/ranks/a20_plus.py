@@ -774,7 +774,7 @@ emerald_1_substitutions = [
     # 16s
     LampFloorRequirement(
         level=16,
-        lamp=Lamp.Red,
+        lamp=Lamp.Blue,
         floor=991_000,
         num_exceptions=9,
         exception_floor=980_000,
@@ -783,7 +783,7 @@ emerald_1_substitutions = [
     # 17s
     LampFloorRequirement(
         level=17,
-        lamp=Lamp.Clear,
+        lamp=Lamp.Red,
         floor=980_000,
         num_exceptions=10,
         exception_floor=955_000,
@@ -791,12 +791,16 @@ emerald_1_substitutions = [
     PFCRequirement(level=17, num=8),
     AAARequirement(level=17, num=60),
     # 18s
-    FloorRequirement(
-        level=18, floor=910_000, num_exceptions=19, exception_floor=860_000
+    LampFloorRequirement(
+        level=18,
+        lamp=Lamp.Clear,
+        floor=910_000,
+        num_exceptions=19,
+        exception_floor=860_000,
     ),
     AAARequirement(level=18, num=12),
     # 19s
-    FloorRequirement(level=19, floor=910_000),
+    CeilingRequirement(level=19, ceiling=910_000),
     # Other
     MFCRequirement(level=13),
     SDPRequirement(level=15),
@@ -818,7 +822,7 @@ emerald_1 = Life4Rank(
         # 15s
         LampFloorRequirement(
             level=15,
-            lamp=Lamp.Red,
+            lamp=Lamp.Blue,
             floor=991_000,
             num_exceptions=9,
             exception_floor=980_000,
@@ -827,7 +831,7 @@ emerald_1 = Life4Rank(
         # 16s
         LampFloorRequirement(
             level=16,
-            lamp=Lamp.Clear,
+            lamp=Lamp.Red,
             floor=980_000,
             num_exceptions=10,
             exception_floor=955_000,
@@ -835,8 +839,12 @@ emerald_1 = Life4Rank(
         PFCRequirement(level=16, num=24),
         AAARequirement(level=16, num=67),
         # 17s
-        FloorRequirement(
-            level=17, floor=955_000, num_exceptions=14, exception_floor=910_000
+        LampFloorRequirement(
+            level=17,
+            lamp=Lamp.Clear,
+            floor=955_000,
+            num_exceptions=14,
+            exception_floor=910_000,
         ),
         PFCRequirement(level=17, num=1),
         AAARequirement(level=17, num=26),
@@ -846,7 +854,7 @@ emerald_1 = Life4Rank(
         ),
         AAARequirement(level=18, num=2),
         # 19s
-        ClearRequirement(level=19, num=1, floor=700_000),
+        ClearRequirement(level=19, num=1),
         CeilingRequirement(level=19, ceiling=700_000),
         # Other
         MFCRequirement(level=11),

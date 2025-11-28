@@ -137,7 +137,12 @@ class ClearRequirement(Requirement, ProgressDisplay):
         self.exception_floor = exception_floor
 
     def __str__(self):
-        req_str = f"Clear {self.num_required} {self.level}s"
+        if self.num_required == 1:
+            article = _article_for_level(self.level)
+            req_str = f"Clear {article} {self.level}"
+        else:
+            req_str = f"Clear {self.num_required} {self.level}s"
+
         if self.floor:
             req_str += f" over {_format_score(self.floor)}"
         if self.num_exceptions:
@@ -279,7 +284,7 @@ class LampFloorRequirement(Requirement, ProgressDisplay):
     def __str__(self):
         lamp_label_map = {
             Lamp.Clear: "Clear",
-            Lamp.Red: "Life4 Clear",
+            Lamp.Red: "LIFE4 Clear",
             Lamp.Blue: "Full Combo",
             Lamp.Green: "Great Full Combo",
             Lamp.Gold: "Perfect Full Combo",
