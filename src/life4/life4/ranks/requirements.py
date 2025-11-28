@@ -5,6 +5,21 @@ from life4.ddr import Lamp
 from life4.life4.core import Life4RankEnum
 
 
+_LEVELS_TAKING_AN = {8, 11, 18}
+
+
+def _article_for_level(level: int) -> str:
+    return "an" if level in _LEVELS_TAKING_AN else "a"
+
+
+def _format_score(score: int) -> str:
+    if score is None:
+        return ""
+    if score % 1000 == 0:
+        return f"{score // 1000}k"
+    return f"{score:,}"
+
+
 class Requirement(ABC):
     multiple_levels: bool
 
@@ -66,7 +81,11 @@ class PFCRequirement(Requirement, ProgressDisplay):
         return f"{data.get_num_pfcs(self.level)}/{self.num_pfc}"
 
     def display_str(self, data: "DDRDataset") -> str:
-        str_to_display = f"PFC {self.num_pfc} {self.level}s"
+        if self.num_pfc == 1:
+            article = _article_for_level(self.level)
+            str_to_display = f"PFC {article} {self.level}"
+        else:
+            str_to_display = f"PFC {self.num_pfc} {self.level}s"
         if not self.is_satisfied(data):
             str_to_display += f" ({self.get_progress(data)})"
         return str_to_display
@@ -88,7 +107,11 @@ class AAARequirement(Requirement):
         return f"{data.get_num_AAA(level=self.level)}/{self.num_AAA}"
 
     def display_str(self, data: "DDRDataset") -> str:
-        str_to_display = f"AAA {self.num_AAA} {self.level}s"
+        if self.num_AAA == 1:
+            article = _article_for_level(self.level)
+            str_to_display = f"AAA {article} {self.level}"
+        else:
+            str_to_display = f"AAA {self.num_AAA} {self.level}s"
         if not self.is_satisfied(data):
             str_to_display += f" ({self.get_progress(data)})"
         return str_to_display
@@ -114,11 +137,18 @@ class ClearRequirement(Requirement, ProgressDisplay):
         self.exception_floor = exception_floor
 
     def __str__(self):
-        req_str = f"Clear {self.num_required} {self.level}s"
+        if self.num_required == 1:
+            article = _article_for_level(self.level)
+            req_str = f"Clear {article} {self.level}"
+        else:
+            req_str = f"Clear {self.num_required} {self.level}s"
+
         if self.floor:
-            req_str += f" over {str(self.floor)[:3]}k"
+            req_str += f" over {_format_score(self.floor)}"
         if self.num_exceptions:
-            req_str += f" ({self.num_exceptions}E, {str(self.exception_floor)[:3]}k)"
+            req_str += (
+                f" ({self.num_exceptions}E, {_format_score(self.exception_floor)})"
+            )
         return req_str
 
     def _get_valid_scores(self, data) -> int:
@@ -162,7 +192,8 @@ class CeilingRequirement(Requirement):
         self.ceiling = ceiling
 
     def __str__(self):
-        return f"{str(self.ceiling)[:3]}k+ an {self.level}"
+        article = _article_for_level(self.level)
+        return f"{_format_score(self.ceiling)}+ {article} {self.level}"
 
     def is_satisfied(self, data: "DDRDataset"):
         return data.get_ceiling(level=self.level) >= self.ceiling
@@ -189,9 +220,11 @@ class FloorRequirement(Requirement, ProgressDisplay):
         self.exception_floor = exception_floor
 
     def __str__(self):
-        req_str = f"All {self.level}s over {str(self.floor)[:3]}k"
+        req_str = f"All {self.level}s over {_format_score(self.floor)}"
         if self.num_exceptions:
-            req_str += f" ({self.num_exceptions}E, {str(self.exception_floor)[:3]}k)"
+            req_str += (
+                f" ({self.num_exceptions}E, {_format_score(self.exception_floor)})"
+            )
         return req_str
 
     def is_satisfied(self, data: "DDRDataset"):
@@ -217,6 +250,66 @@ class FloorRequirement(Requirement, ProgressDisplay):
         )
         valid_exceptions = min(len(song_exceptions), self.num_exceptions)
         return f"{songs_above_floor + valid_exceptions}/{total_songs}"
+
+    def display_str(self, data: "DDRDataset") -> str:
+        str_to_display = str(self)
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
+
+
+class LampFloorRequirement(Requirement, ProgressDisplay):
+    """Combined lamp and floor requirement for a single level."""
+
+    multiple_levels = False
+
+    def __init__(
+        self,
+        level: int,
+        lamp: "Lamp",
+        floor: int,
+        num_exceptions: int = 0,
+        exception_floor: int = None,
+    ):
+        self.level = level
+        self.lamp = lamp
+        self.lamp_requirement = LampRequirement(level=level, lamp=lamp)
+        self.floor_requirement = FloorRequirement(
+            level=level,
+            floor=floor,
+            num_exceptions=num_exceptions,
+            exception_floor=exception_floor,
+        )
+
+    def __str__(self):
+        lamp_label_map = {
+            Lamp.Clear: "Clear",
+            Lamp.Red: "LIFE4 Clear",
+            Lamp.Blue: "Full Combo",
+            Lamp.Green: "Great Full Combo",
+            Lamp.Gold: "Perfect Full Combo",
+            Lamp.White: "Marvelous Full Combo",
+        }
+        lamp_label = lamp_label_map.get(self.lamp, f"{self.lamp.name.title()} Lamp")
+        floor_str = str(self.floor_requirement)
+        if floor_str:
+            floor_str = floor_str[0].lower() + floor_str[1:]
+        return f"{lamp_label} {floor_str}".strip()
+
+    def is_satisfied(self, data: "DDRDataset"):
+        lamp_ok = self.lamp_requirement.is_satisfied(data)
+        floor_ok = self.floor_requirement.is_satisfied(data)
+        return lamp_ok and floor_ok
+
+    def get_progress(self, data: "DDRDataset") -> str:
+        progress_parts = []
+        if not self.lamp_requirement.is_satisfied(data):
+            progress_parts.append(f"Lamp {self.lamp_requirement.get_progress(data)}")
+        if not self.floor_requirement.is_satisfied(data):
+            progress_parts.append(f"Floor {self.floor_requirement.get_progress(data)}")
+        if not progress_parts:
+            return self.floor_requirement.get_progress(data)
+        return "; ".join(progress_parts)
 
     def display_str(self, data: "DDRDataset") -> str:
         str_to_display = str(self)
@@ -267,6 +360,35 @@ class SDPRequirement(Requirement):
         return str(self)
 
 
+class SDPCountRequirement(Requirement, ProgressDisplay):
+    """Requirement for earning multiple SDPs at or above a given level."""
+
+    multiple_levels = True
+
+    def __init__(self, level: int, num: int):
+        self.level = level
+        self.num = num
+
+    def __str__(self):
+        return f"SDP {self.num} {self.level}s+"
+
+    def _count_sdps(self, data: "DDRDataset") -> int:
+        sdps = data.get_sdps()
+        return len(sdps[sdps["Level"] >= self.level])
+
+    def is_satisfied(self, data: "DDRDataset"):
+        return self._count_sdps(data) >= self.num
+
+    def get_progress(self, data: "DDRDataset") -> str:
+        return f"{self._count_sdps(data)}/{self.num}"
+
+    def display_str(self, data: "DDRDataset") -> str:
+        str_to_display = str(self)
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
+
+
 class MFCRequirement(Requirement):
     """Requirement for getting an MFC at or above a given level"""
 
@@ -276,13 +398,46 @@ class MFCRequirement(Requirement):
         self.level = level
 
     def __str__(self):
-        return f"MFC a {self.level}+"
+        article = _article_for_level(self.level)
+        return f"MFC {article} {self.level}+"
 
     def is_satisfied(self, data: "DDRDataset"):
         return max(data.get_lamp(Lamp.White)["Level"]) >= self.level
 
     def display_str(self, data: "DDRDataset") -> str:
         return str(self)
+
+
+class MFCCountRequirement(Requirement, ProgressDisplay):
+    """Requirement for earning multiple MFCs at or above a given level."""
+
+    multiple_levels = True
+
+    def __init__(self, level: int, num: int):
+        self.level = level
+        self.num = num
+
+    def __str__(self):
+        if self.num == 1:
+            article = _article_for_level(self.level)
+            return f"MFC {article} {self.level}+"
+        return f"MFC {self.num} {self.level}s+"
+
+    def _count_mfcs(self, data: "DDRDataset") -> int:
+        mfcs = data.get_lamp(Lamp.White)
+        return len(mfcs[mfcs["Level"] >= self.level])
+
+    def is_satisfied(self, data: "DDRDataset"):
+        return self._count_mfcs(data) >= self.num
+
+    def get_progress(self, data: "DDRDataset") -> str:
+        return f"{self._count_mfcs(data)}/{self.num}"
+
+    def display_str(self, data: "DDRDataset") -> str:
+        str_to_display = str(self)
+        if not self.is_satisfied(data):
+            str_to_display += f" ({self.get_progress(data)})"
+        return str_to_display
 
 
 class TrialRequirement(Requirement):
