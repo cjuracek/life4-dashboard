@@ -38,7 +38,7 @@ def main(data_source: dict):
     with cent_co:
         st.image("assets/life4-logo.png", width=10, use_container_width=True)
 
-    rank_choice = st.selectbox("Select rank", ("Amethyst", "Emerald"), index=0)
+    rank_choice = st.selectbox("Select rank", ("Amethyst", "Emerald"), index=1)
     if rank_choice == "Amethyst":
         rank = amethyst
     else:
