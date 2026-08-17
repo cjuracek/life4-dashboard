@@ -191,7 +191,7 @@ Per merged chart:
 |---|---|
 | `level`, `availability` | From WORLD |
 | `score` | `max` across sources, NaN-aware |
-| date columns | Earliest non-null across sources |
+| date columns | First non-null, WORLD preferred. Only null-ness affects lamp derivation, so no date parsing is needed |
 | judgment block (`marvelous`…`ex`, `ma_ratio`) | Taken as a unit from the higher-scoring source |
 
 Unioning the date columns yields `max(lamp)` for free: `_get_lamp` tests
