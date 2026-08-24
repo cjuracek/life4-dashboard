@@ -22,7 +22,7 @@ This design covers all four workstreams plus a test suite.
 ## Goals
 
 - Fix confirmed correctness bugs in requirement evaluation.
-- Load sheets through a documented, non-truncating endpoint.
+- Load sheets through a documented endpoint that ignores the sheet's filter view.
 - Present LIFE4 progress as the union of A3 and WORLD play history.
 - Replace A20+ requirements with DDR World requirements for Pearl through Emerald.
 - Establish a test suite over requirement logic.
@@ -69,7 +69,7 @@ L14  6 charts    L15  11    L16  5    L17  4    L18  2
 **Impact.** Under the classification in "Two chart-pool views", these 28 are
 dropped from `FloorRequirement` and `LampRequirement` denominators. If any is
 actually a normal World song, that requirement reads satisfied when it is not —
-the same false-positive direction as the gviz truncation. Conversely the four
+the same false-positive direction as the gviz filter leak. Conversely the four
 known-wrong `course trial` charts have their scores discarded from every count,
 including a 999,620.
 
@@ -142,7 +142,8 @@ nice-to-have, not a blocker.
 
 ## Findings that drove the design
 
-Each of these was measured against the live document on 2026-08-16, not inferred.
+Each of these was measured against the live document, not inferred. Dates noted
+per finding; the gviz diagnosis was corrected on 2026-08-23.
 
 ### The gviz endpoint inherits the sheet's filter view
 
@@ -315,7 +316,7 @@ variants.
 | Rename a *read* column | **Hard fail at load**, naming tab, canonical field, accepted names, and the actual header. |
 
 Hard failure is deliberate. The two defects this overhaul exists to fix — gviz
-truncation and stale availability markers — were both *silent*. A load-time
+the gviz filter leak and stale availability markers — were both *silent*. A load-time
 failure fixed by adding one string is strictly better than a dashboard that
 quietly reports a rank as closer than it is.
 
@@ -444,7 +445,7 @@ New work:
 |---|---|---|---|
 | 1 | `requirements.py:154` | **Live** | `ClearRequirement` with no floor returns `len(level_scores)` — every chart at that level, played or not. `ClearRequirement(level=19, num=1)` evaluates `10 >= 1 → True` on 2 played 19s. The `return_zero=False` argument is accepted by `get_level_scores` and ignored. |
 | 2 | `ddr.py` filters | **Live** | `extra exclusive` and `phase 2` are not classified. See "two chart-pool views". |
-| 3 | `backends.py` | **Live** | gviz truncation. See findings. |
+| 3 | `backends.py` | **Live** | gviz inherits the sheet's filter view. See findings. |
 | 4 | `backends.py` / `ddr.py` | **Live** | WORLD's `P`/`M`/`Gr` columns break `get_sdps()`'s `Perf` lookup. Blocks the merge outright. |
 | 5 | `app.py:17` | **Live** | `data_source_info.pop("source")` mutates `st.secrets`, which persists across Streamlit reruns. |
 | 6 | `core.py:6` | Latent | `MFC_POINT_MAPPING` stops at level 16; `get_ma_points()` raises `KeyError` on the first SDP or MFC at 17+. Currently returns 30.92 because the highest SDP is a 14. |

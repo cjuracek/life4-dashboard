@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make the dashboard read both the A3 and WORLD score tabs through a non-truncating endpoint, merge them into one chart history, and stop reporting requirements as satisfied when they are not.
+**Goal:** Make the dashboard read both the A3 and WORLD score tabs through an endpoint that ignores the sheet's filter view, merge them into one chart history, and stop reporting requirements as satisfied when they are not.
 
 **Architecture:** Four separable layers replace the current single `backends.py` → `DDRDataset` path. A pure schema module maps each tab's header onto the 11 canonical columns the app actually reads, by name, via one shared alias table; unread columns are ignored and a missing read column is a hard failure. A loader fetches `/export?format=csv&gid=`. A merge module joins the two tabs on `(title, diff)`, taking max score, unioned achievement dates, and the perfect count from the higher-scoring row. `DDRDataset` then exposes two chart-pool views — one that includes optional charts (for counting) and one that excludes them (for "all charts at this level" requirements) — and each `Requirement` subclass declares which it consumes.
 
@@ -1287,7 +1287,8 @@ def test_builds_the_documented_export_url():
 
 
 def test_url_does_not_use_the_gviz_endpoint():
-    # gviz silently truncated the WORLD tab to 3,408 of 10,814 rows.
+    # gviz honours the sheet's filter view; it returned 3,415 of the WORLD
+    # tab's 10,821 rows because that tab is filtered to singles, level 8+.
     assert "gviz" not in GoogleSheetLoader(doc_id="ABC123").csv_url(0)
 ```
 
