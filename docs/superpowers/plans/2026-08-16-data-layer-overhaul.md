@@ -4,7 +4,7 @@
 
 **Goal:** Make the dashboard read both the A3 and WORLD score tabs through a non-truncating endpoint, merge them into one chart history, and stop reporting requirements as satisfied when they are not.
 
-**Architecture:** Four separable layers replace the current single `backends.py` → `DDRDataset` path. A pure schema module maps each tab's raw header positionally onto canonical column names, asserting the header verbatim first. A loader fetches `/export?format=csv&gid=`. A merge module joins the two tabs on `(title, diff)`, taking max score, unioned achievement dates, and the judgment block from the higher-scoring row. `DDRDataset` then exposes two chart-pool views — one that includes optional charts (for counting) and one that excludes them (for "all charts at this level" requirements) — and each `Requirement` subclass declares which it consumes.
+**Architecture:** Four separable layers replace the current single `backends.py` → `DDRDataset` path. A pure schema module maps each tab's header onto the 11 canonical columns the app actually reads, by name, via one shared alias table; unread columns are ignored and a missing read column is a hard failure. A loader fetches `/export?format=csv&gid=`. A merge module joins the two tabs on `(title, diff)`, taking max score, unioned achievement dates, and the perfect count from the higher-scoring row. `DDRDataset` then exposes two chart-pool views — one that includes optional charts (for counting) and one that excludes them (for "all charts at this level" requirements) — and each `Requirement` subclass declares which it consumes.
 
 **Tech Stack:** Python 3.11+, pandas, pydantic, Streamlit, pytest, ruff, uv.
 
@@ -17,7 +17,8 @@
 - Singles difficulties only: `bSP`, `BSP`, `DSP`, `ESP`, `CSP`.
 - Canonical column names are lowercase snake_case throughout. No code below the loader may reference a raw sheet header.
 - Tests never touch the network and never import `streamlit`.
-- The WORLD raw header contains `M` twice (Marvelous at index 5, Miss at index 10). Header mapping is **positional**, never by name.
+- Only these 11 columns are read: `diff` `level` `title` `score` `perfect` `record_on` `pfc_date` `gfc_date` `fc_date` `life4_date` `availability`. Everything else in the sheet is ignored on purpose. Mapping is **by name**; the duplicate `M` in the WORLD header is Marvelous and Miss, both unread.
+- Streamlit floor is `>=1.62`. Use `st.cache_data(refresh_mode="background")` for data refresh; `st.popover` (not a nested `st.expander`, which Streamlit forbids) for in-expander disclosure.
 - `uv run pytest` is the test command. `uv run ruff check .` must pass before every commit.
 
 ---
@@ -26,7 +27,7 @@
 
 | Path | Responsibility |
 |---|---|
-| `src/life4/data/schema.py` | **new** — canonical columns, per-tab `TabSchema`, header assertion, `normalize()` |
+| `src/life4/data/schema.py` | **new** — 11 canonical columns, one shared `COLUMN_ALIASES` table, `normalize()` |
 | `src/life4/data/availability.py` | **new** — `AvailabilityClass`, `ChartPool`, `classify()` |
 | `src/life4/data/merge.py` | **new** — `merge_scores()` |
 | `src/life4/data/loaders.py` | **new** — `GoogleSheetLoader`, replaces `backends.py` |
@@ -42,7 +43,16 @@
 
 ---
 
-## Task 1: Canonical schema and header assertion
+## Task 1: Canonical schema by name-alias
+
+Maps each tab's header onto canonical column names, mapping **only the 11 columns
+the app actually reads**. Mapping is by name via one shared alias table — not
+positional, and not per-tab.
+
+Audited 2026-08-23: the duplicate `M` in the WORLD header is Marvelous and Miss,
+**both unread**, so the duplicate-header problem that originally forced positional
+mapping does not exist. 10 of the 11 read columns are identically named in both
+tabs; only `perfect` differs (`P` in WORLD, `Perf` in CTF).
 
 **Files:**
 - Create: `src/life4/data/schema.py`
@@ -51,7 +61,7 @@
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `CANONICAL_COLUMNS: tuple[str, ...]`; `TabSchema(name: str, header: tuple[str, ...], columns: tuple[str, ...])`; `A3_SCHEMA`, `WORLD_SCHEMA`, `TRIALS_SCHEMA`; `SchemaError(Exception)`; `normalize(csv_text: str, schema: TabSchema) -> pd.DataFrame`.
+- Produces: `CANONICAL_COLUMNS: tuple[str, ...]`; `COLUMN_ALIASES: dict[str, frozenset[str]]`; `SchemaError(Exception)`; `normalize(csv_text: str, tab_name: str) -> pd.DataFrame`.
 
 - [ ] **Step 1: Add pytest**
 
@@ -66,18 +76,13 @@ Create `tests/test_schema.py`:
 ```python
 import pytest
 
-from life4.data.schema import (
-    A3_SCHEMA,
-    WORLD_SCHEMA,
-    SchemaError,
-    normalize,
-)
+from life4.data.schema import CANONICAL_COLUMNS, SchemaError, normalize
 
 WORLD_CSV = (
     "Diff,Level,Title,# times,Last played,M,P,Gr,Go,O.K.,M,EX,Score,"
     "Record On,AAA Date,PFC Date,GFC Date,FC Date,Life4 Date,Availability,MA\n"
     "ESP,16,Metamorphic,3,4/17/2026,900,4,0,0,0,1,1800,999670,"
-    "4/1/2026,4/2/2026,,,4/3/2026,,,0.99\n"
+    "4/1/2026,4/2/2026,4/3/2026,,,,0.99\n"
 )
 
 A3_CSV = (
@@ -85,48 +90,69 @@ A3_CSV = (
     '"Great","Good","O.K.","Miss","EX","Score","Record On","AAA Date",'
     '"PFC Date","GFC Date","FC Date","Life4 Date","Availability"\n'
     '"ESP","16","Metamorphic","5","2/19/2026","0.98","880","20","0","0","0",'
-    '"0","1780","998000","1/1/2026","1/2/2026","1/3/2026",,,,\n'
+    '"0","1780","998000","1/1/2026","1/2/2026","1/3/2026","","","",""\n'
 )
 
 
-def test_world_header_maps_duplicate_m_positionally():
-    df = normalize(WORLD_CSV, WORLD_SCHEMA)
-    assert df.loc[0, "marvelous"] == 900
-    assert df.loc[0, "miss"] == 1
-    assert df.loc[0, "ma_ratio"] == 0.99
+def test_maps_world_p_to_perfect():
+    df = normalize(WORLD_CSV, "world")
+    assert df.loc[0, "perfect"] == 4
 
 
-def test_a3_header_maps_to_same_canonical_names():
-    df = normalize(A3_CSV, A3_SCHEMA)
-    assert df.loc[0, "marvelous"] == 880
+def test_maps_a3_perf_to_perfect():
+    df = normalize(A3_CSV, "a3")
     assert df.loc[0, "perfect"] == 20
-    assert df.loc[0, "score"] == 998000
 
 
-def test_both_tabs_produce_identical_columns():
-    assert list(normalize(WORLD_CSV, WORLD_SCHEMA).columns) == list(
-        normalize(A3_CSV, A3_SCHEMA).columns
+def test_both_tabs_produce_the_same_columns():
+    assert list(normalize(WORLD_CSV, "world").columns) == list(CANONICAL_COLUMNS)
+    assert list(normalize(A3_CSV, "a3").columns) == list(CANONICAL_COLUMNS)
+
+
+def test_duplicate_m_header_is_ignored_because_neither_is_read():
+    # WORLD's header has "M" twice (Marvelous and Miss). Neither is read, so
+    # the ambiguity must never reach the caller.
+    df = normalize(WORLD_CSV, "world")
+    assert "marvelous" not in df.columns
+    assert "miss" not in df.columns
+
+
+def test_unread_columns_may_be_renamed_freely():
+    changed = WORLD_CSV.replace("EX", "ExScore", 1).replace("# times", "Plays", 1)
+    df = normalize(changed, "world")
+    assert df.loc[0, "score"] == 999670
+
+
+def test_extra_column_is_ignored():
+    changed = WORLD_CSV.replace("Availability,MA\n", "Availability,MA,Notes\n", 1)
+    changed = changed.replace("0.99\n", "0.99,hello\n", 1)
+    assert normalize(changed, "world").loc[0, "score"] == 999670
+
+
+def test_reordering_read_columns_is_fine():
+    reordered = (
+        "Title,Diff,Level,Score,P,Record On,PFC Date,GFC Date,FC Date,"
+        "Life4 Date,Availability\n"
+        "Metamorphic,ESP,16,999670,4,4/1/2026,4/3/2026,,,,\n"
     )
+    df = normalize(reordered, "world")
+    assert df.loc[0, "score"] == 999670
+    assert df.loc[0, "perfect"] == 4
 
 
-def test_renamed_column_raises_schema_error_naming_the_tab():
-    broken = WORLD_CSV.replace("Score", "Money Score", 1)
+def test_renaming_a_read_column_fails_with_an_actionable_message():
+    broken = WORLD_CSV.replace(",Score,", ",Money Score,", 1)
     with pytest.raises(SchemaError) as exc:
-        normalize(broken, WORLD_SCHEMA)
-    assert "world" in str(exc.value)
-    assert "Money Score" in str(exc.value)
-
-
-def test_extra_trailing_columns_raise_schema_error():
-    broken = WORLD_CSV.replace("Availability,MA\n", "Availability,MA,,,\n", 1)
-    with pytest.raises(SchemaError):
-        normalize(broken, WORLD_SCHEMA)
+        normalize(broken, "world")
+    message = str(exc.value)
+    assert "world" in message
+    assert "score" in message
+    assert "COLUMN_ALIASES" in message
 
 
 def test_thousands_separators_parse_as_numbers():
     with_commas = WORLD_CSV.replace("999670", '"999,670"')
-    df = normalize(with_commas, WORLD_SCHEMA)
-    assert df.loc[0, "score"] == 999670
+    assert normalize(with_commas, "world").loc[0, "score"] == 999670
 ```
 
 - [ ] **Step 3: Run the tests to verify they fail**
@@ -139,135 +165,102 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'life4.data.schema'`
 Create `src/life4/data/schema.py`:
 
 ```python
-import csv
 import io
-from dataclasses import dataclass
 
 import pandas as pd
 
+#: The only columns the app reads. Audited 2026-08-23 against ddr.py and
+#: requirements.py; everything else in the sheet is ignored on purpose.
 CANONICAL_COLUMNS = (
     "diff",
     "level",
     "title",
-    "times_played",
-    "last_played",
-    "marvelous",
-    "perfect",
-    "great",
-    "good",
-    "ok",
-    "miss",
-    "ex",
     "score",
+    "perfect",
     "record_on",
-    "aaa_date",
     "pfc_date",
     "gfc_date",
     "fc_date",
     "life4_date",
     "availability",
-    "ma_ratio",
 )
+
+#: One shared table, not per-tab schemas. The WORLD tab is live and will drift;
+#: the CTF tab is dormant. Per-tab definitions would mean a WORLD rename
+#: silently requires a matching CTF edit that nobody remembers to make. Here,
+#: adding one alias fixes both tabs at once.
+#:
+#: Only `perfect` needs more than one alias today -- the other ten read columns
+#: are already identically named in both tabs. Add aliases when a rename
+#: actually happens; do not seed speculative variants.
+COLUMN_ALIASES: dict[str, frozenset[str]] = {
+    "diff": frozenset({"Diff"}),
+    "level": frozenset({"Level"}),
+    "title": frozenset({"Title"}),
+    "score": frozenset({"Score"}),
+    "perfect": frozenset({"P", "Perf"}),
+    "record_on": frozenset({"Record On"}),
+    "pfc_date": frozenset({"PFC Date"}),
+    "gfc_date": frozenset({"GFC Date"}),
+    "fc_date": frozenset({"FC Date"}),
+    "life4_date": frozenset({"Life4 Date"}),
+    "availability": frozenset({"Availability"}),
+}
 
 
 class SchemaError(Exception):
-    """A sheet tab's header did not match what this code was written against."""
+    """A tab is missing a column the app reads."""
 
 
-@dataclass(frozen=True)
-class TabSchema:
-    """Maps one tab's raw header onto canonical column names, by position.
-
-    Positional rather than by name because the WORLD tab's header contains
-    "M" twice (Marvelous and Miss). Any name-based mapping would silently
-    resolve one of them to the wrong column.
-    """
-
-    name: str
-    header: tuple[str, ...]
-    columns: tuple[str, ...]
-
-    def __post_init__(self) -> None:
-        if len(self.header) != len(self.columns):
-            raise ValueError(f"{self.name}: header and columns differ in length")
-        unknown = set(self.columns) - set(CANONICAL_COLUMNS)
-        if unknown:
-            raise ValueError(f"{self.name}: non-canonical columns {sorted(unknown)}")
-
-
-A3_SCHEMA = TabSchema(
-    name="a3",
-    header=(
-        "Diff", "Level", "Title", "# times", "Last played", "MA Ratio",
-        "Marv", "Perf", "Great", "Good", "O.K.", "Miss", "EX", "Score",
-        "Record On", "AAA Date", "PFC Date", "GFC Date", "FC Date",
-        "Life4 Date", "Availability",
-    ),
-    columns=(
-        "diff", "level", "title", "times_played", "last_played", "ma_ratio",
-        "marvelous", "perfect", "great", "good", "ok", "miss", "ex", "score",
-        "record_on", "aaa_date", "pfc_date", "gfc_date", "fc_date",
-        "life4_date", "availability",
-    ),
-)
-
-WORLD_SCHEMA = TabSchema(
-    name="world",
-    header=(
-        "Diff", "Level", "Title", "# times", "Last played",
-        "M", "P", "Gr", "Go", "O.K.", "M", "EX", "Score",
-        "Record On", "AAA Date", "PFC Date", "GFC Date", "FC Date",
-        "Life4 Date", "Availability", "MA",
-    ),
-    columns=(
-        "diff", "level", "title", "times_played", "last_played",
-        "marvelous", "perfect", "great", "good", "ok", "miss", "ex", "score",
-        "record_on", "aaa_date", "pfc_date", "gfc_date", "fc_date",
-        "life4_date", "availability", "ma_ratio",
-    ),
-)
-
-
-def normalize(csv_text: str, schema: TabSchema) -> pd.DataFrame:
+def normalize(csv_text: str, tab_name: str) -> pd.DataFrame:
     """Parse raw CSV text into a frame with canonical column names.
 
-    Asserts the header verbatim first, so a renamed or reordered column
-    fails here with an actionable message rather than surfacing later as a
-    KeyError from inside lamp derivation.
+    Only the columns in CANONICAL_COLUMNS are kept. Unread columns may be
+    added, removed, renamed, or reordered freely. A *read* column that no
+    longer matches any alias is a hard failure at load, before any number is
+    computed -- silent wrongness is the failure mode this whole layer exists
+    to prevent.
     """
-    header_line = csv_text.split("\n", 1)[0]
-    actual = tuple(next(csv.reader([header_line])))
-    if actual != schema.header:
+    raw = pd.read_csv(io.StringIO(csv_text), thousands=",")
+
+    rename: dict[str, str] = {}
+    missing: list[str] = []
+    for canonical, aliases in COLUMN_ALIASES.items():
+        matches = [column for column in raw.columns if column in aliases]
+        if not matches:
+            missing.append(canonical)
+            continue
+        rename[matches[0]] = canonical
+
+    if missing:
         raise SchemaError(
-            f"Tab {schema.name!r} header does not match.\n"
-            f"  expected: {schema.header}\n"
-            f"  actual:   {actual}"
+            f"Tab {tab_name!r} is missing a column for: {', '.join(sorted(missing))}.\n"
+            + "\n".join(
+                f"  {name!r} accepts: {', '.join(sorted(COLUMN_ALIASES[name]))}"
+                for name in sorted(missing)
+            )
+            + f"\n  Header has: {', '.join(map(str, raw.columns))}\n"
+            f"  Fix: add the new sheet column name to COLUMN_ALIASES in "
+            f"life4/data/schema.py -- one entry covers every tab."
         )
-    # names= with skiprows=1 bypasses pandas' duplicate-column deduplication,
-    # which would otherwise turn the WORLD tab's second "M" into "M.1".
-    return pd.read_csv(
-        io.StringIO(csv_text),
-        skiprows=1,
-        names=schema.columns,
-        thousands=",",
-    )
+
+    return raw.rename(columns=rename)[list(CANONICAL_COLUMNS)]
 ```
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `uv run pytest tests/test_schema.py -v`
-Expected: 6 passed
+Expected: 9 passed
 
 - [ ] **Step 6: Lint and commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
 git add src/life4/data/schema.py tests/test_schema.py pyproject.toml uv.lock
-git commit -m "feat(data): canonical tab schema with verbatim header assertion"
+git commit -m "feat(data): canonical schema mapping read columns by name alias"
 ```
 
 ---
-
 ## Task 2: Fixture builders and DDRDataset on canonical columns
 
 `DDRDataset` currently loads, filters, and validates inside `__init__`, which makes it untestable without a network round-trip and a dataset containing every level 14–19. This task separates construction from loading and moves it onto canonical column names.
@@ -1053,17 +1046,22 @@ def test_achievement_dates_union_across_sources():
     assert merged.loc[0, "score"] == 991_000
 
 
-def test_judgment_block_travels_together_from_the_higher_scoring_row():
-    primary = frame(
-        chart(title="a", level=16, score=980_000, marvelous=800, perfect=40, miss=2)
-    )
-    secondary = frame(
-        chart(title="a", level=16, score=999_950, marvelous=900, perfect=5, miss=0)
-    )
+def test_perfect_count_travels_with_the_higher_score():
+    # A PFC's score is a deterministic function of its perfect count, so the
+    # max score and its perfect count always come from the same row. Taking
+    # them from different rows could manufacture an SDP that never happened.
+    primary = frame(chart(title="a", level=16, score=980_000, perfect=40))
+    secondary = frame(chart(title="a", level=16, score=999_950, perfect=5))
+    merged = merge_scores(primary, secondary)
+    assert merged.loc[0, "score"] == 999_950
+    assert merged.loc[0, "perfect"] == 5
+
+
+def test_perfect_count_is_not_taken_from_the_lower_scoring_row():
+    primary = frame(chart(title="a", level=16, score=999_950, perfect=5))
+    secondary = frame(chart(title="a", level=16, score=980_000, perfect=40))
     merged = merge_scores(primary, secondary)
     assert merged.loc[0, "perfect"] == 5
-    assert merged.loc[0, "marvelous"] == 900
-    assert merged.loc[0, "miss"] == 0
 
 
 def test_unplayed_on_both_stays_unplayed():
@@ -1092,17 +1090,14 @@ logger = logging.getLogger(__name__)
 
 KEY_COLUMNS = ["title", "diff"]
 
-#: Only meaningful as a set -- they describe one run. Moved as a unit.
-JUDGMENT_COLUMNS = (
-    "marvelous", "perfect", "great", "good", "ok", "miss", "ex",
-    "ma_ratio", "times_played", "last_played",
-)
+#: Tied to `score` -- a PFC's score is a deterministic function of its perfect
+#: count, so this must come from whichever row holds the max score. Taking it
+#: independently could manufacture an SDP that never happened.
+SCORE_BOUND_COLUMNS = ("perfect",)
 
 #: Unioning these yields max(lamp) for free: _get_lamp tests pfc -> gfc -> fc
 #: -> life4 in descending order, so a lamp earned on either cabinet surfaces.
-DATE_COLUMNS = (
-    "record_on", "aaa_date", "pfc_date", "gfc_date", "fc_date", "life4_date",
-)
+DATE_COLUMNS = ("record_on", "pfc_date", "gfc_date", "fc_date", "life4_date")
 
 #: Taken from the primary source, which defines the chart pool.
 PRIMARY_COLUMNS = ("title", "diff", "level", "availability")
@@ -1143,7 +1138,7 @@ def merge_scores(primary: pd.DataFrame, secondary: pd.DataFrame) -> pd.DataFrame
 
     out["score"] = m[["score_p", "score_s"]].max(axis=1)
 
-    for column in JUDGMENT_COLUMNS:
+    for column in SCORE_BOUND_COLUMNS:
         out[column] = np.where(take_secondary, m[f"{column}_s"], m[f"{column}_p"])
 
     for column in DATE_COLUMNS:
@@ -1179,8 +1174,8 @@ HTTP 200, dropping unplayed rows while preserving every played one.
 - Test: `tests/test_loaders.py`
 
 **Interfaces:**
-- Consumes: `TabSchema`, `normalize` from Task 1.
-- Produces: `SheetTab(gid: int, schema: TabSchema)`; `GoogleSheetLoader(doc_id: str)` with `csv_url(gid: int) -> str` and `load(tab: SheetTab) -> pd.DataFrame`.
+- Consumes: `normalize` from Task 1.
+- Produces: `GoogleSheetLoader(doc_id: str)` with `csv_url(gid: int) -> str`, `load(gid: int, tab_name: str) -> pd.DataFrame`, and `load_trials(gid: int) -> pd.DataFrame`.
 
 - [ ] **Step 1: Read the missing gids**
 
@@ -1225,22 +1220,16 @@ Create `src/life4/data/loaders.py`:
 
 ```python
 import logging
-from dataclasses import dataclass
+import io
 
 import pandas as pd
 import requests
 
-from life4.data.schema import TabSchema, normalize
+from life4.data.schema import normalize
 
 logger = logging.getLogger(__name__)
 
 _EXPORT_URL = "https://docs.google.com/spreadsheets/d/{doc_id}/export?format=csv&gid={gid}"
-
-
-@dataclass(frozen=True)
-class SheetTab:
-    gid: int
-    schema: TabSchema
 
 
 class GoogleSheetLoader:
@@ -1259,12 +1248,12 @@ class GoogleSheetLoader:
     def csv_url(self, gid: int) -> str:
         return _EXPORT_URL.format(doc_id=self.doc_id, gid=gid)
 
-    def load(self, tab: SheetTab) -> pd.DataFrame:
-        url = self.csv_url(tab.gid)
-        logger.info("Loading tab %s from %s", tab.schema.name, url)
+    def load(self, gid: int, tab_name: str) -> pd.DataFrame:
+        url = self.csv_url(gid)
+        logger.info("Loading tab %s from %s", tab_name, url)
         response = requests.get(url, timeout=self.timeout)
         response.raise_for_status()
-        return normalize(response.text, tab.schema)
+        return normalize(response.text, tab_name)
 ```
 
 - [ ] **Step 6: Delete the old backend**
@@ -1299,15 +1288,16 @@ Expected: 2 passed
 
 ```bash
 uv run python -c "
-from life4.data.loaders import GoogleSheetLoader, SheetTab
-from life4.data.schema import WORLD_SCHEMA
+from life4.data.loaders import GoogleSheetLoader
 loader = GoogleSheetLoader('1o664te8mE0nnD-PyEW7kEW8CszLPQ3E_')
-df = loader.load(SheetTab(gid=638900183, schema=WORLD_SCHEMA))
-print(len(df))
+df = loader.load(gid=638900183, tab_name='world')
+print(len(df), list(df.columns))
 "
 ```
 
-Expected: `10814`. Anything materially lower means truncation has returned.
+Expected: a number in the ten-thousands. Assert a **floor**, not equality — the
+sheet is live and grows as World adds songs (10,814 on 2026-08-16; 10,821 on
+2026-08-23). Anything near gviz's 3,408 means truncation has returned.
 
 - [ ] **Step 10: Commit**
 
@@ -1337,9 +1327,8 @@ shrinking the denominator of every 'all Ns over X' requirement."
 ```python
 import streamlit as st
 
-from life4.data.loaders import GoogleSheetLoader, SheetTab
+from life4.data.loaders import GoogleSheetLoader
 from life4.data.merge import merge_scores
-from life4.data.schema import A3_SCHEMA, WORLD_SCHEMA
 from life4.ddr import DDRDataset
 from life4.life4.core import Life4Trial
 from life4.life4.ranks.a20_plus import amethyst, emerald
@@ -1355,8 +1344,8 @@ def load_frames():
     secrets = st.secrets["sheets"]
     loader = GoogleSheetLoader(doc_id=secrets["doc_id"])
     tabs = secrets["tabs"]
-    world = loader.load(SheetTab(gid=tabs["world"], schema=WORLD_SCHEMA))
-    a3 = loader.load(SheetTab(gid=tabs["a3"], schema=A3_SCHEMA))
+    world = loader.load(gid=tabs["world"], tab_name="world")
+    a3 = loader.load(gid=tabs["a3"], tab_name="a3")
     trials = loader.load_trials(gid=tabs["trials"])
     return world, a3, trials
 

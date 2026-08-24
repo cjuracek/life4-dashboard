@@ -36,6 +36,96 @@ This design covers all four workstreams plus a test suite.
 - Official LIFE4 submission conformance. See "Known divergence from official rules".
 - Multi-user support. This remains a personal dashboard reading one document.
 
+## KNOWN BAD DATA: availability markers are A3-era (unresolved)
+
+**Every number this dashboard reports at levels 14–18 is suspect until the 32
+availability markers in the WORLD tab are reviewed against DDR World.**
+
+The WORLD tab was created by copying the CTF (A3) tab, so its `Availability`
+column is A3 annotation, not World annotation. Measured 2026-08-23: the two tabs
+disagree on availability for **0 of 5,124** shared charts — the column is a single
+annotation duplicated, not per-version data.
+
+Four markers are provably wrong. These are marked `course trial` yet were played
+on World in the last month and never on A3:
+
+| Chart | World score | Last played | A3 score |
+|---|---|---|---|
+| EMOTiON TRiPPER ESP 14 | 998,320 | 2026-07-26 | never |
+| PERSIAN LAND ESP 15 | 997,090 | 2026-08-10 | never |
+| Phlox ESP 15 | 997,340 | 2026-08-10 | never |
+| Debug Dance ESP 15 | 999,620 | 2026-08-16 | never |
+
+An A3 course-trial unlock is frequently a default song in World. The same applies
+to Extra Stage: an A3 Extra Stage song often becomes a normal World song.
+
+The remaining 28 marked charts are unplayed, so their markers cannot be checked
+against play history. They sit at exactly the levels that matter:
+
+```
+L14  6 charts    L15  11    L16  5    L17  4    L18  2
+```
+
+**Impact.** Under the classification in "Two chart-pool views", these 28 are
+dropped from `FloorRequirement` and `LampRequirement` denominators. If any is
+actually a normal World song, that requirement reads satisfied when it is not —
+the same false-positive direction as the gviz truncation. Conversely the four
+known-wrong `course trial` charts have their scores discarded from every count,
+including a 999,620.
+
+**Marking is also incomplete**, independently of being stale: 32 of 10,821 rows
+carry any marker at all (0.30%). DDR World has more unlock-gated charts than
+that, so charts that *should* be excluded are silently counted in denominators.
+
+**Resolution (deferred by owner, 2026-08-23).** Review the 32 markers in the
+WORLD tab against World reality. This is 32 cells, not 10,821 rows. Until then,
+treat level 14–18 requirement results as approximate.
+
+Candidate mitigation not yet adopted: *played implies playable.* A chart with a
+World score is playable on World regardless of its marker. Derivable from data,
+self-correcting, and would have auto-fixed all four known-wrong markers.
+
+The adopted mitigation is the blocker display below.
+
+### Blocker display (adopted)
+
+Incomplete marking is a *separate* defect from stale marking, and it fails the
+opposite way. A genuinely unplayable chart that carries no marker is counted in
+the denominator, so the requirement reads harder than reality and can be
+permanently unachievable. Unlike stale markers, this is not fixable by reviewing
+32 cells — it would require sweeping every unplayed 14–19 chart, which is
+hundreds.
+
+So it is surfaced rather than annotated. Blockers split into two categories that
+behave differently (measured 2026-08-23 against merged data):
+
+| requirement | total | below floor | unplayed | played-low |
+|---|---|---|---|---|
+| Amethyst I L14 | 261 | 35 | 32 | 3 |
+| Amethyst I L15 | 271 | 62 | 62 | 0 |
+| Emerald I L17 | 148 | 48 | 32 | 16 |
+| Emerald V L14 | 261 | 123 | 32 | 91 |
+
+**Unplayed count is a property of the level, not the requirement** — L14 has 32
+unplayed charts regardless of target rank (L15: 62, L16: 51, L17: 32, L18: 48,
+L19: 10). That set shrinks monotonically as the player plays, and whatever
+remains unplayed once everything else is cleared *is* the unplayable set. The
+played-low set is a pure practice list and grows with rank; its names are never
+useful.
+
+Display: counts always inline, names behind an `st.popover` containing a
+scrollable `st.dataframe` sorted by distance from target. Early on the counts are
+the information and the list stays closed; late, the list is short and is exactly
+the information needed. Same widget in both regimes.
+
+`st.popover` is required because requirement checkboxes already render inside a
+rank `st.expander`, and Streamlit does not permit nested expanders.
+
+**Streamlit floor raised to `>=1.62`** (1.62.0 released 2026-08-19; the venv held
+1.51.0 against a `>=1.41.1` pin). 1.61 added `st.cache_data(refresh_mode=
+"background")`, adopted for the refresh button so re-downloading ~21k rows across
+two tabs does not block the page.
+
 ## Known divergence from official rules
 
 The LIFE4 FAQ states that A20+ submissions cannot use A3 scores. A merged
@@ -165,25 +255,70 @@ Delete `OnedriveDataSource`. It is unreferenced, and its `load_trials` reads
 
 ### 2. Canonical schema
 
-One canonical column set:
+**Only the columns the app actually reads are mapped.** Audited 2026-08-23:
 
-```
-diff, level, title, times_played, last_played,
-marvelous, perfect, great, good, ok, miss, ex, score,
-record_on, aaa_date, pfc_date, gfc_date, fc_date, life4_date,
-availability, ma_ratio
+| | Columns |
+|---|---|
+| **Read (11)** | `Diff` `Level` `Title` `Score` `Perf`/`P` `Record On` `PFC Date` `GFC Date` `FC Date` `Life4 Date` `Availability` |
+| **Unread (10)** | `Marv` `Great` `Good` `O.K.` `Miss` `EX` `MA Ratio` `# times` `Last played` `AAA Date` |
+
+This audit removes the reason for positional mapping. The duplicate `M` in the
+WORLD header is Marvelous and Miss — **both unread**. `P` is unambiguous. So
+mapping is **by name**, and the duplicate-header problem never arises.
+
+Mapping is **one shared alias table**, not a per-tab schema:
+
+```python
+COLUMN_ALIASES = {
+    "diff":         {"Diff"},
+    "level":        {"Level"},
+    "title":        {"Title"},
+    "score":        {"Score"},
+    "perfect":      {"P", "Perf"},      # WORLD: P, CTF: Perf
+    "record_on":    {"Record On"},
+    "pfc_date":     {"PFC Date"},
+    "gfc_date":     {"GFC Date"},
+    "fc_date":      {"FC Date"},
+    "life4_date":   {"Life4 Date"},
+    "availability": {"Availability"},
+}
 ```
 
-Each tab declares a mapping onto it. Because the WORLD header contains `M` twice,
-**mappings are positional, not by name**, and each tab's expected raw header line
-is asserted verbatim before mapping. A header change fails loudly at load with a
-message naming the tab and the offending column, rather than surfacing as a
-`KeyError` from inside `_get_lamp` or as a silent Marvelous/Miss swap.
+One shared table rather than per-tab dicts, because the tabs have different
+maintenance lifecycles: WORLD is live and will drift, CTF is dormant. Per-tab
+definitions would mean a WORLD rename silently requires a matching CTF edit that
+nobody will remember. With a shared table there is no CTF-specific definition to
+forget — adding one alias fixes both tabs at once.
+
+Measured: **10 of the 11 read columns are already identically named in both
+tabs.** Only `perfect` differs, so `perfect` is the only entry needing more than
+one alias today. Aliases are added when a rename actually happens; no speculative
+variants.
+
+**Behaviour on drift:**
+
+| Change | Result |
+|---|---|
+| Rename/add/reorder an *unread* column | Nothing. Ignored entirely. |
+| Add a new column | Nothing. |
+| Reorder read columns | Nothing — mapping is by name. |
+| Rename a *read* column | **Hard fail at load**, naming tab, canonical field, accepted names, and the actual header. |
+
+Hard failure is deliberate. The two defects this overhaul exists to fix — gviz
+truncation and stale availability markers — were both *silent*. A load-time
+failure fixed by adding one string is strictly better than a dashboard that
+quietly reports a rank as closer than it is.
 
 ### 3. Merge
 
 WORLD defines the chart pool and every chart's level. A3 contributes score and
 achievement history only, joined on `(title, diff)`.
+
+A3 is **dormant, not frozen** — the owner does not currently play it but would
+update the tab if they did. Nothing may snapshot, cache to disk, or otherwise
+freeze the A3 tab; both tabs are re-read on every load. (Measured 2026-08-23:
+scores were *not* copied between tabs — 0 of 168 charts played on both have
+identical scores — so the two histories are genuinely independent.)
 
 Per merged chart:
 
