@@ -10,6 +10,56 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-16-life4-dashboard-overhaul-design.md`
 
+---
+
+## STATUS — resume here (last updated 2026-08-23)
+
+**No code written yet.** Tasks 1–9 are all unstarted; `src/` and `app.py` are
+untouched. Everything so far is design.
+
+Tasks 1 and 7 have been **prototyped and verified** outside the repo — the code
+blocks in this plan were extracted, run, and checked against the live sheets:
+
+- 21/21 tests pass (10 schema, 11 merge)
+- full pipeline on real data: 6,152 charts, **0 orphans**, **1,689 played after
+  merge vs 265 from WORLD alone** (L14 +152, L15 +159, L16 +130, L18 +48)
+
+So Task 1 and Task 7 can be typed in as written and should pass first try.
+
+### Blocked on Cole
+
+1. **Task 8 Step 1** — the `CTF` and trials tab **gids**. Click each tab, read
+   `gid=` from the URL. Only step in the plan that needs a human.
+2. **The 32 availability markers** in the WORLD tab (see the spec's
+   `KNOWN BAD DATA` section). Deferred by owner 2026-08-23. Level 14–18 numbers
+   are approximate until reviewed. Not blocking implementation.
+
+### Decided but not yet folded into the tasks
+
+- **MA point values for 17–19.** The `ddr-terminology` skill gives the table:
+  **level 16+ is a flat 25 MFC / 2.5 SDP**. This resolves the open question that
+  Task 4 was written to defend against. Task 4 should extend
+  `MFC_POINT_MAPPING` to 19 with 25 each *and* keep `MAPointsUnknownLevel` for
+  anything still unmapped.
+- **Task 10 — blocker display.** Designed in the spec ("Blocker display
+  (adopted)"), not yet written as a task. Additive; does not change Tasks 1–9.
+
+### Open questions carried forward
+
+1. Whether `galaxy brave` (2 charts, WORLD only) is `OPTIONAL` or `EXCLUDED`.
+   Defaults to `EXCLUDED` under the allowlist.
+2. Whether Pearl or Topaz have requirements below level 14 — determines how far
+   the `range(14, 20)` fix must generalise, and whether `record_on` matters
+   (it disagrees with `score` on 52 rows, all at levels 11–13).
+3. Marking A3-carryover requirements in the UI, for honesty about the divergence
+   from official LIFE4 submission rules.
+
+### Phase 4 has no plan yet
+
+DDR World requirements, Pearl → Emerald, transcribed verbatim. Deliberately
+unplanned: it means reading 20 pages while writing the plan, and planning it
+blind would produce placeholders.
+
 ## Global Constraints
 
 - Python `>=3.11`. Dependencies managed by `uv`; add with `uv add`, dev deps with `uv add --dev`.
