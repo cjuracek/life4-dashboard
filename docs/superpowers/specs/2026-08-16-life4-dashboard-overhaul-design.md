@@ -144,7 +144,7 @@ nice-to-have, not a blocker.
 
 Each of these was measured against the live document on 2026-08-16, not inferred.
 
-### The gviz endpoint silently truncates
+### The gviz endpoint inherits the sheet's filter view
 
 The current loader uses `gviz/tq?tqx=out:csv&sheet=<TabName>`, an undocumented
 endpoint of the deprecated Google Visualization API. Measured against the WORLD
@@ -152,22 +152,32 @@ tab:
 
 | Endpoint | Rows returned |
 |---|---|
-| `/export?format=csv&gid=638900183` | 10,814 |
-| `/gviz/tq?tqx=out:csv&gid=638900183` | 3,408 |
-| `/gviz/...&tq=select * limit 20000` | 3,408 |
+| `/export?format=csv&gid=638900183` | 10,821 |
+| `/gviz/tq?tqx=out:csv&gid=638900183` | 3,415 |
+| `/gviz/...&tq=select * limit 20000` | 3,415 |
 
-7,406 rows are dropped. HTTP 200, no warning, and the returned keys are a strict
-subset of the full set. The same endpoint returns the `CTF` tab (5,124 rows)
-complete, so the failure is size-dependent and unpredictable.
+**This is not truncation.** An earlier revision of this spec diagnosed it as a
+size-dependent row cap; that was wrong. The rule is exact — verified against all
+10,821 rows with **zero** mismatches:
 
-**All 200 played charts survive the truncation.** What is dropped is unplayed
-rows — which are precisely the denominators. Under gviz, `get_level_lamp` returns
-a better lamp than reality (the `NO_LAMP` rows vanished) and `FloorRequirement`
-denominators shrink, so "All 16s over 955k" becomes satisfiable when it is not.
-Every resulting error flatters progress.
+```
+gviz returns a row  <=>  Diff in {bSP,BSP,DSP,ESP,CSP}  AND  Level >= 8
+```
 
-This is the reason to move off gviz. The URL-format-change risk that originally
-motivated the workstream is real but secondary.
+That is a **filter view applied to the WORLD tab** (singles only, level 8+).
+`gviz/tq` honours the sheet's active filter; `/export?format=csv` ignores it and
+returns the raw grid. The `CTF` tab appeared unaffected only because it contains
+no doubles and so its filter hides nothing.
+
+**The conclusion stands, for a better reason.** A data loader must not inherit a
+view setting. Today the filter happens to align with what the app wants; if the
+filter is ever changed — to inspect level 15+, say — every denominator in the
+dashboard silently changes with it, with no error and no visible cause. Progress
+numbers must not depend on what the spreadsheet is currently displaying.
+
+Consequence: **the app applies its own singles filter** and never relies on the
+sheet's. Already specified in "Loading" below; now for a stated reason rather
+than by accident.
 
 ### The two tabs do not share a schema
 
@@ -342,6 +352,35 @@ and min-perfect always come from the same row anyway. Moving the block as a unit
 makes that safe by construction rather than by coincidence.
 
 Trials are single-source. No trial merge.
+
+#### Title drift and orphan detection
+
+Titles are matched **exactly**. They are never normalized, stripped, or fuzzy
+matched.
+
+Measured 2026-08-23: 431 of 1,504 WORLD titles (28.7%) contain a parenthetical.
+The owner's markup convention for foreign-language titles — `原題 (romanization,
+artist)` — is syntactically **indistinguishable** from DDR's own version markers
+`(X-Special)`, `(kskst mix)`, `(PLUS step)`. Stripping the parenthetical to make
+matching more forgiving collides on **80 stems**, merging genuinely distinct
+charts:
+
+```
+'PARANOiA'  ->  PARANOiA  |  PARANOiA(X-Special)  |  PARANOiA (kskst mix)
+'革命'       ->  革命 (KAKUMEI, ...)  |  革命 (X-Special) (KAKUMEI (X-Special), ...)
+```
+
+Fuzzy matching would trade a rare, detectable failure for a common, silent one.
+
+Detection instead. **WORLD is a strict superset of CTF by construction** (the
+WORLD tab was created by copying CTF), so a CTF chart with no WORLD match is
+always a defect — a drifted title or a removed song — never normal. Measured
+today: **0 orphans**, 245 WORLD-only titles (new songs since the copy, expected).
+
+`merge_scores` returns orphans alongside the merged frame, and the app surfaces
+the count and titles. An orphan means A3 scores silently stop counting toward
+every requirement — the exact silent-failure class this overhaul exists to
+eliminate — so it must be visible in the UI, not only in a log.
 
 ### 4. Two chart-pool views
 

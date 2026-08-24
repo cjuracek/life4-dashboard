@@ -61,7 +61,7 @@ tabs; only `perfect` differs (`P` in WORLD, `Perf` in CTF).
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `CANONICAL_COLUMNS: tuple[str, ...]`; `COLUMN_ALIASES: dict[str, frozenset[str]]`; `SchemaError(Exception)`; `normalize(csv_text: str, tab_name: str) -> pd.DataFrame`.
+- Produces: `CANONICAL_COLUMNS: tuple[str, ...]`; `NUMERIC_COLUMNS: tuple[str, ...]`; `COLUMN_ALIASES: dict[str, frozenset[str]]`; `SchemaError(Exception)`; `normalize(csv_text: str, tab_name: str) -> pd.DataFrame`. `normalize` owns dtypes: `level`, `score`, `perfect` are always numeric, blanks as `NaN`.
 
 - [ ] **Step 1: Add pytest**
 
@@ -75,6 +75,8 @@ Create `tests/test_schema.py`:
 
 ```python
 import pytest
+
+import pandas as pd
 
 from life4.data.schema import CANONICAL_COLUMNS, SchemaError, normalize
 
@@ -153,6 +155,18 @@ def test_renaming_a_read_column_fails_with_an_actionable_message():
 def test_thousands_separators_parse_as_numbers():
     with_commas = WORLD_CSV.replace("999670", '"999,670"')
     assert normalize(with_commas, "world").loc[0, "score"] == 999670
+
+
+def test_numeric_columns_are_numeric_even_when_the_tab_is_all_blanks():
+    blanks = (
+        "Diff,Level,Title,Score,P,Record On,PFC Date,GFC Date,FC Date,"
+        "Life4 Date,Availability\n"
+        "ESP,16,Untouched,,,,,,,,\n"
+    )
+    df = normalize(blanks, "world")
+    assert df["score"].dtype.kind == "f"
+    assert df["perfect"].dtype.kind == "f"
+    assert pd.isna(df.loc[0, "score"])
 ```
 
 - [ ] **Step 3: Run the tests to verify they fail**
@@ -208,6 +222,12 @@ COLUMN_ALIASES: dict[str, frozenset[str]] = {
 }
 
 
+#: Coerced to numeric at load so every layer below can compare them without
+#: re-checking dtypes. A blank cell becomes NaN, which is how "unplayed" is
+#: represented throughout.
+NUMERIC_COLUMNS = ("level", "score", "perfect")
+
+
 class SchemaError(Exception):
     """A tab is missing a column the app reads."""
 
@@ -244,7 +264,10 @@ def normalize(csv_text: str, tab_name: str) -> pd.DataFrame:
             f"life4/data/schema.py -- one entry covers every tab."
         )
 
-    return raw.rename(columns=rename)[list(CANONICAL_COLUMNS)]
+    out = raw.rename(columns=rename)[list(CANONICAL_COLUMNS)].copy()
+    for column in NUMERIC_COLUMNS:
+        out[column] = pd.to_numeric(out[column], errors="coerce")
+    return out
 ```
 
 - [ ] **Step 5: Run the tests to verify they pass**
@@ -278,23 +301,28 @@ git commit -m "feat(data): canonical schema mapping read columns by name alias"
 Create `tests/conftest.py`:
 
 ```python
+import numpy as np
 import pandas as pd
 import pytest
 
-from life4.data.schema import CANONICAL_COLUMNS
+from life4.data.schema import CANONICAL_COLUMNS, NUMERIC_COLUMNS
 from life4.ddr import DDRDataset
 
 
 def chart(**overrides):
     """One chart row. Everything defaults to unplayed; override what matters."""
-    row = dict.fromkeys(CANONICAL_COLUMNS)
+    row = dict.fromkeys(CANONICAL_COLUMNS, np.nan)
     row.update(diff="ESP", level=16, title="untitled")
     row.update(overrides)
     return row
 
 
 def frame(*charts):
-    return pd.DataFrame(list(charts), columns=list(CANONICAL_COLUMNS))
+    """Build a frame with the same dtypes normalize() produces from real CSV."""
+    df = pd.DataFrame(list(charts), columns=list(CANONICAL_COLUMNS))
+    for column in NUMERIC_COLUMNS:
+        df[column] = pd.to_numeric(df[column], errors="coerce")
+    return df
 
 
 def dataset(*charts, trials=None):
@@ -986,7 +1014,7 @@ git commit -m "fix(ddr): optional charts count when earned but never block requi
 
 **Interfaces:**
 - Consumes: `CANONICAL_COLUMNS` from Task 1.
-- Produces: `merge_scores(primary: pd.DataFrame, secondary: pd.DataFrame) -> pd.DataFrame`. `primary` defines the chart pool, every chart's `level`, and `availability`. Returns one row per `(title, diff)` in `primary`.
+- Produces: `MergeResult(charts: pd.DataFrame, orphans: pd.DataFrame)`; `merge_scores(primary, secondary) -> MergeResult`. `primary` defines the chart pool, every chart's `level`, and `availability`. `charts` has one row per `(title, diff)` in `primary`; `orphans` holds secondary rows with no primary match.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1002,7 +1030,7 @@ from life4.data.merge import merge_scores
 def test_primary_defines_the_chart_pool_and_levels():
     primary = frame(chart(title="drift", diff="DSP", level=15))
     secondary = frame(chart(title="drift", diff="DSP", level=14, score=900_000))
-    merged = merge_scores(primary, secondary)
+    merged = merge_scores(primary, secondary).charts
     assert len(merged) == 1
     assert merged.loc[0, "level"] == 15
 
@@ -1012,13 +1040,13 @@ def test_charts_only_in_secondary_are_dropped():
     secondary = frame(
         chart(title="a", level=16), chart(title="gone", level=16, score=999_000)
     )
-    assert list(merge_scores(primary, secondary)["title"]) == ["a"]
+    assert list(merge_scores(primary, secondary).charts["title"]) == ["a"]
 
 
 def test_score_is_the_max_across_sources():
     primary = frame(chart(title="a", level=16, score=980_000))
     secondary = frame(chart(title="a", level=16, score=991_000))
-    assert merge_scores(primary, secondary).loc[0, "score"] == 991_000
+    assert merge_scores(primary, secondary).charts.loc[0, "score"] == 991_000
 
 
 def test_a_chart_played_only_on_the_secondary_carries_over():
@@ -1026,7 +1054,7 @@ def test_a_chart_played_only_on_the_secondary_carries_over():
     secondary = frame(
         chart(title="a", level=16, score=985_000, record_on="1/1/2026", fc_date="1/2/2026")
     )
-    merged = merge_scores(primary, secondary)
+    merged = merge_scores(primary, secondary).charts
     assert merged.loc[0, "score"] == 985_000
     assert merged.loc[0, "fc_date"] == "1/2/2026"
 
@@ -1039,7 +1067,7 @@ def test_achievement_dates_union_across_sources():
             record_on="1/1/2026", fc_date="1/2/2026", pfc_date="1/3/2026",
         )
     )
-    merged = merge_scores(primary, secondary)
+    merged = merge_scores(primary, secondary).charts
     # The PFC was earned on the secondary cabinet; it must survive the merge
     # even though the primary holds the higher score.
     assert merged.loc[0, "pfc_date"] == "1/3/2026"
@@ -1052,7 +1080,7 @@ def test_perfect_count_travels_with_the_higher_score():
     # them from different rows could manufacture an SDP that never happened.
     primary = frame(chart(title="a", level=16, score=980_000, perfect=40))
     secondary = frame(chart(title="a", level=16, score=999_950, perfect=5))
-    merged = merge_scores(primary, secondary)
+    merged = merge_scores(primary, secondary).charts
     assert merged.loc[0, "score"] == 999_950
     assert merged.loc[0, "perfect"] == 5
 
@@ -1060,12 +1088,47 @@ def test_perfect_count_travels_with_the_higher_score():
 def test_perfect_count_is_not_taken_from_the_lower_scoring_row():
     primary = frame(chart(title="a", level=16, score=999_950, perfect=5))
     secondary = frame(chart(title="a", level=16, score=980_000, perfect=40))
-    merged = merge_scores(primary, secondary)
+    merged = merge_scores(primary, secondary).charts
     assert merged.loc[0, "perfect"] == 5
 
 
+def test_orphan_secondary_chart_is_reported_not_silently_dropped():
+    # WORLD is a strict superset of CTF by construction, so a CTF chart with
+    # no WORLD match is always a defect -- usually a drifted title. It must
+    # surface, because it means A3 scores stopped counting.
+    primary = frame(chart(title="Tiger rampage (sasakure.UK)", level=17))
+    secondary = frame(
+        chart(title="Tiger rampage", level=17, score=969_390, record_on="1/1/2026")
+    )
+    result = merge_scores(primary, secondary)
+    assert len(result.charts) == 1
+    assert pd.isna(result.charts.loc[0, "score"])
+    assert list(result.orphans["title"]) == ["Tiger rampage"]
+
+
+def test_no_orphans_when_every_secondary_chart_matches():
+    primary = frame(chart(title="a", level=16), chart(title="b", level=16))
+    secondary = frame(chart(title="a", level=16, score=900_000))
+    assert len(merge_scores(primary, secondary).orphans) == 0
+
+
+def test_titles_are_never_normalized_before_joining():
+    # 'PARANOiA' and 'PARANOiA (kskst mix)' are different charts. Stripping
+    # parentheticals to make matching forgiving would merge them.
+    primary = frame(
+        chart(title="PARANOiA", level=16), chart(title="PARANOiA (kskst mix)", level=16)
+    )
+    secondary = frame(chart(title="PARANOiA", level=16, score=950_000))
+    merged = merge_scores(primary, secondary).charts
+    scores = dict(zip(merged["title"], merged["score"]))
+    assert scores["PARANOiA"] == 950_000
+    assert pd.isna(scores["PARANOiA (kskst mix)"])
+
+
 def test_unplayed_on_both_stays_unplayed():
-    merged = merge_scores(frame(chart(title="a", level=16)), frame(chart(title="a", level=16)))
+    merged = merge_scores(
+        frame(chart(title="a", level=16)), frame(chart(title="a", level=16))
+    ).charts
     assert pd.isna(merged.loc[0, "score"])
 ```
 
@@ -1080,6 +1143,7 @@ Create `src/life4/data/merge.py`:
 
 ```python
 import logging
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -1089,6 +1153,20 @@ from life4.data.schema import CANONICAL_COLUMNS
 logger = logging.getLogger(__name__)
 
 KEY_COLUMNS = ["title", "diff"]
+
+
+@dataclass(frozen=True)
+class MergeResult:
+    """Merged chart history, plus any secondary rows that failed to join.
+
+    WORLD is a strict superset of CTF by construction, so a non-empty
+    ``orphans`` is always a defect -- a drifted title or a removed song. It
+    means A3 scores have silently stopped counting, so the app surfaces it
+    rather than only logging it.
+    """
+
+    charts: pd.DataFrame
+    orphans: pd.DataFrame
 
 #: Tied to `score` -- a PFC's score is a deterministic function of its perfect
 #: count, so this must come from whichever row holds the max score. Taking it
@@ -1114,14 +1192,14 @@ def merge_scores(primary: pd.DataFrame, secondary: pd.DataFrame) -> pd.DataFrame
     judgment columns travel as a unit from whichever source holds the higher
     score.
     """
-    orphans = len(
-        secondary.merge(primary[KEY_COLUMNS], on=KEY_COLUMNS, how="left", indicator=True)
-        .query("_merge == 'left_only'")
+    matched = secondary.merge(
+        primary[KEY_COLUMNS], on=KEY_COLUMNS, how="left", indicator=True
     )
-    if orphans:
+    orphans = secondary[(matched["_merge"] == "left_only").to_numpy()]
+    if len(orphans):
         logger.warning(
-            "%d charts in the secondary source have no match in the primary "
-            "source and will be dropped.", orphans
+            "%d secondary charts have no primary match; their scores will not "
+            "count. Usually a drifted title.", len(orphans)
         )
 
     m = primary.merge(secondary, on=KEY_COLUMNS, how="left", suffixes=("_p", "_s"))
@@ -1144,7 +1222,8 @@ def merge_scores(primary: pd.DataFrame, secondary: pd.DataFrame) -> pd.DataFrame
     for column in DATE_COLUMNS:
         out[column] = m[f"{column}_p"].combine_first(m[f"{column}_s"])
 
-    return out[list(CANONICAL_COLUMNS)].reset_index(drop=True)
+    charts = out[list(CANONICAL_COLUMNS)].reset_index(drop=True)
+    return MergeResult(charts=charts, orphans=orphans.reset_index(drop=True))
 ```
 
 - [ ] **Step 4: Run to verify they pass**
@@ -1164,8 +1243,11 @@ git commit -m "feat(data): merge A3 and WORLD chart histories on (title, diff)"
 
 ## Task 8: Loader on the documented export endpoint
 
-Bug #3. The gviz endpoint returns 3,408 of the WORLD tab's 10,814 rows with
-HTTP 200, dropping unplayed rows while preserving every played one.
+Bug #3. The gviz endpoint returns 3,415 of the WORLD tab's 10,821 rows because
+it **inherits the sheet's filter view** (singles only, level 8+) — verified
+exactly, zero mismatches across all rows. A loader must not inherit a view
+setting: change the filter while inspecting the sheet and every denominator in
+the dashboard silently changes with it.
 
 **Files:**
 - Create: `src/life4/data/loaders.py`
@@ -1235,10 +1317,14 @@ _EXPORT_URL = "https://docs.google.com/spreadsheets/d/{doc_id}/export?format=csv
 class GoogleSheetLoader:
     """Reads tabs via the documented CSV export endpoint.
 
-    Deliberately not gviz/tq: that endpoint returned 3,408 of the WORLD tab's
-    10,814 rows with HTTP 200 and no warning, discarding unplayed charts --
-    which are exactly the denominators every "all Ns over X" requirement
-    depends on.
+    Deliberately not gviz/tq: that endpoint honours whatever filter view is
+    active on the sheet. The WORLD tab has one (singles, level 8+), so gviz
+    returned 3,415 of 10,821 rows with HTTP 200 and no warning. Today that
+    filter happens to align with what the app wants; if it is ever changed,
+    every denominator would shift with no error and no visible cause.
+
+    /export?format=csv ignores filters and returns the raw grid. The app then
+    applies its own singles filter explicitly.
     """
 
     def __init__(self, doc_id: str, timeout: int = 30):
@@ -1295,20 +1381,28 @@ print(len(df), list(df.columns))
 "
 ```
 
-Expected: a number in the ten-thousands. Assert a **floor**, not equality — the
-sheet is live and grows as World adds songs (10,814 on 2026-08-16; 10,821 on
-2026-08-23). Anything near gviz's 3,408 means truncation has returned.
+Expected: a number in the ten-thousands, and **doubles must be present** — their
+absence means a filter leaked in. Assert a floor, not equality; the sheet is live
+and grows (10,814 on 2026-08-16; 10,821 on 2026-08-23).
+
+```python
+assert len(df) > 9000, 'sheet filter may have leaked into the load'
+assert (~df['diff'].isin(['bSP','BSP','DSP','ESP','CSP'])).any(), 'no doubles: filtered'
+assert (df['level'] < 8).any(), 'no sub-8 charts: filtered'
+```
 
 - [ ] **Step 10: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
 git add -A
-git commit -m "fix(data): load sheets via /export instead of the truncating gviz endpoint
+git commit -m "fix(data): load sheets via /export so the sheet filter cannot leak in
 
-gviz/tq returned 3,408 of the WORLD tab's 10,814 rows with HTTP 200,
-dropping unplayed charts while preserving every played one -- silently
-shrinking the denominator of every 'all Ns over X' requirement."
+gviz/tq honours the WORLD tab's active filter view (singles, level 8+),
+returning 3,415 of 10,821 rows with HTTP 200. Verified exactly: gviz
+membership == (singles AND level >= 8), zero mismatches. A loader must
+not inherit a view setting -- changing the filter would silently move
+every requirement denominator."
 ```
 
 ---
@@ -1325,6 +1419,7 @@ shrinking the denominator of every 'all Ns over X' requirement."
 - [ ] **Step 1: Replace app.py**
 
 ```python
+import pandas as pd
 import streamlit as st
 
 from life4.data.loaders import GoogleSheetLoader
@@ -1350,18 +1445,28 @@ def load_frames():
     return world, a3, trials
 
 
-def load_dataset() -> DDRDataset:
+def load_dataset() -> tuple[DDRDataset, pd.DataFrame]:
     world, a3, trials = load_frames()
     singles = lambda df: df[df["diff"].isin(SINGLES_DIFFICULTIES)]
-    merged = merge_scores(singles(world), singles(a3))
-    return DDRDataset(merged, trials=[Life4Trial(**row) for _, row in trials.iterrows()])
+    result = merge_scores(singles(world), singles(a3))
+    trial_models = [Life4Trial(**row) for _, row in trials.iterrows()]
+    return DDRDataset(result.charts, trials=trial_models), result.orphans
 
 
 def main() -> None:
     if st.button("Refresh data"):
         load_frames.clear()
 
-    data = load_dataset()
+    data, orphans = load_dataset()
+
+    if len(orphans):
+        st.warning(
+            f"{len(orphans)} A3 charts no longer match any WORLD chart, so "
+            f"their scores are not counting. Usually a drifted title."
+        )
+        with st.expander("Show unmatched A3 charts"):
+            st.dataframe(orphans[["title", "diff", "level", "score"]], height=200)
+
 
     _, center, _ = st.columns(3)
     with center:
