@@ -28,8 +28,9 @@ So Tasks 1 and 7 can be typed in as written and should pass first try.
 
 ### Blocked on Cole
 
-1. **Task 8 Step 1** — the `CTF` and trials tab **gids**. Click each tab, read
-   `gid=` from the URL. The only step in the plan that needs a human.
+1. **Task 8 Step 1** — the **trials** tab gid. Click the tab, read `gid=` from
+   the URL. The only step in the plan that needs a human. The score tabs are
+   known and verified: WORLD `638900183`, CTF/A3 `1003204842`.
 
 ### Resolved since the last session
 
@@ -69,7 +70,7 @@ blind would produce placeholders.
 ## Global Constraints
 
 - Python `>=3.11`. Dependencies managed by `uv`; add with `uv add`, dev deps with `uv add --dev`.
-- Document ID is `1o664te8mE0nnD-PyEW7kEW8CszLPQ3E_`. WORLD tab gid is `638900183`. The A3 (`CTF`) and trials gids are **not yet known** — Task 8 includes reading them off the tab URLs.
+- Document ID is `1o664te8mE0nnD-PyEW7kEW8CszLPQ3E_`. Tab gids: WORLD `638900183`, CTF/A3 `1003204842`. The **trials** gid is still unknown — Task 8 Step 1 reads it off the tab URL.
 - Singles difficulties only: `bSP`, `BSP`, `DSP`, `ESP`, `CSP`.
 - Canonical column names are lowercase snake_case throughout. No code below the loader may reference a raw sheet header.
 - Tests never touch the network and never import `streamlit`.
@@ -1343,10 +1344,11 @@ the dashboard silently changes with it.
 - Consumes: `normalize` from Task 1.
 - Produces: `GoogleSheetLoader(doc_id: str)` with `csv_url(gid: int) -> str`, `load(gid: int, tab_name: str) -> pd.DataFrame`, and `load_trials(gid: int) -> pd.DataFrame`.
 
-- [ ] **Step 1: Read the missing gids**
+- [ ] **Step 1: Read the trials gid**
 
-Open the spreadsheet, click the `CTF` tab and the trials tab, and read `gid=`
-off each tab's URL. Record both — they are needed in Step 5.
+The score tabs are known — WORLD `638900183`, CTF/A3 `1003204842`, both verified
+loading via `/export` on 2026-08-29. Open the spreadsheet, click the **trials**
+tab, and read `gid=` off its URL.
 
 - [ ] **Step 2: Add requests**
 
@@ -1446,7 +1448,7 @@ doc_id = "1o664te8mE0nnD-PyEW7kEW8CszLPQ3E_"
 
 [sheets.tabs]
 world = 638900183
-a3 = <gid read in Step 1>
+a3 = 1003204842
 trials = <gid read in Step 1>
 ```
 
@@ -1466,15 +1468,23 @@ print(len(df), list(df.columns))
 "
 ```
 
-Expected: a number in the ten-thousands, and **doubles must be present** — their
-absence means a filter leaked in. Assert a floor, not equality; the sheet is live
-and grows (10,814 on 2026-08-16; 10,821 on 2026-08-23).
+Expected: **both tabs must contain doubles and sub-8 charts.** Their absence
+means a filter view leaked into the load — both tabs are filtered (WORLD: singles
++ level 8+; CTF: singles), and `/export` is what ignores those filters. Assert a
+floor, not equality; the sheets are live and grow (WORLD 10,814 on 2026-08-16 →
+10,822 on 2026-08-29).
+
+Measured 2026-08-29 via `/export`: WORLD 10,822 rows, CTF 9,010 rows.
 
 ```python
-assert len(df) > 9000, 'sheet filter may have leaked into the load'
-assert (~df['diff'].isin(['bSP','BSP','DSP','ESP','CSP'])).any(), 'no doubles: filtered'
-assert (df['level'] < 8).any(), 'no sub-8 charts: filtered'
+DOUBLES = ~df["diff"].isin(["bSP", "BSP", "DSP", "ESP", "CSP"])
+assert len(df) > 8000, "row count too low; a sheet filter may have leaked in"
+assert DOUBLES.any(), "no doubles present: the tab's filter view leaked in"
+assert (df["level"] < 8).any(), "no sub-8 charts: a level filter leaked in"
 ```
+
+The sub-8 assertion matters more than it looks: 12 MFCs and 81 SDPs sit below
+level 8, worth 11.22 MA points.
 
 - [ ] **Step 10: Commit**
 

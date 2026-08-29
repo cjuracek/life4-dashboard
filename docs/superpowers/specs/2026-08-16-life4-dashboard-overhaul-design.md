@@ -163,8 +163,26 @@ gviz returns a row  <=>  Diff in {bSP,BSP,DSP,ESP,CSP}  AND  Level >= 8
 
 That is a **filter view applied to the WORLD tab** (singles only, level 8+).
 `gviz/tq` honours the sheet's active filter; `/export?format=csv` ignores it and
-returns the raw grid. The `CTF` tab appeared unaffected only because it contains
-no doubles and so its filter hides nothing.
+returns the raw grid.
+
+**Both tabs are filtered.** An earlier revision claimed the CTF tab was
+unaffected "because it contains no doubles" — that was wrong, and only looked
+true because gviz was the only view of CTF available at the time. Loaded via
+`/export?format=csv&gid=1003204842` on 2026-08-29:
+
+| CTF tab | Rows |
+|---|---|
+| `/export` | 9,010 |
+| `gviz` | 5,124 |
+
+CTF's filter is singles-only (all four doubles difficulties hidden, 100% of
+singles kept, no level component). It caused no visible damage because the app
+filters to singles anyway — **but that is coincidence, not safety.** Zero played
+charts are hidden by it, so no earlier measurement was affected.
+
+The lesson is the general one: every tab may carry a filter, the filter is
+invisible from the response, and it can change at any time from the spreadsheet
+UI.
 
 **The conclusion stands, for a better reason.** A data loader must not inherit a
 view setting. Today the filter happens to align with what the app wants; if the
