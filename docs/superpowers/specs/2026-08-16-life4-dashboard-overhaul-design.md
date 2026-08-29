@@ -36,75 +36,71 @@ This design covers all four workstreams plus a test suite.
 - Official LIFE4 submission conformance. See "Known divergence from official rules".
 - Multi-user support. This remains a personal dashboard reading one document.
 
-## KNOWN BAD DATA: availability markers are A3-era (unresolved)
-
-**Every number this dashboard reports at levels 14–18 is suspect until the 32
-availability markers in the WORLD tab are reviewed against DDR World.**
+## Availability markers (resolved 2026-08-29)
 
 The WORLD tab was created by copying the CTF (A3) tab, so its `Availability`
-column is A3 annotation, not World annotation. Measured 2026-08-23: the two tabs
-disagree on availability for **0 of 5,124** shared charts — the column is a single
-annotation duplicated, not per-version data.
+column started life as A3 annotation. On 2026-08-23 the two tabs agreed on
+availability for **0 of 5,124** shared charts — one annotation duplicated, not
+per-version data — and four markers were provably wrong (charts marked
+`course trial` that had been played on World in the previous month).
 
-Four markers are provably wrong. These are marked `course trial` yet were played
-on World in the last month and never on A3:
+**The owner re-annotated the WORLD tab on 2026-08-29.** 28 of the 32 markers were
+cleared: every `course trial` (17), `phase 2` (7), `extra exclusive` (2), and
+`Other` (2) chart is a normal, on-demand song in DDR World. An A3 course-trial
+unlock or Extra Stage song frequently becomes a default World song.
 
-| Chart | World score | Last played | A3 score |
+Four markers remain:
+
+| Marker | Charts |
+|---|---|
+| `removed` | Realize ESP 14 · タイガーランペイジ (Tiger rampage) CSP 17 |
+| `galaxy brave` | Blizzard of Arrows CSP 17 · Roll the Dice CSP 17 |
+
+All four are unplayed, so only denominators move: **L14 262 → 261**,
+**L17 148 → 145**.
+
+The CTF tab keeps its original A3-era markers. This is harmless: `availability`
+is taken from WORLD in the merge (see "Merge"), so CTF's markers are never read.
+
+### Classification
+
+The owner's rule: **a marked chart counts if played, but never counts against
+you.** A `removed` chart you cleared before it was removed should still credit;
+an unplayable chart should not block "all Ns over X".
+
+That collapses the earlier three-class scheme to one rule with no lookup table:
+
+| `availability` | Class | Counts in numerators | Counts in denominators |
 |---|---|---|---|
-| EMOTiON TRiPPER ESP 14 | 998,320 | 2026-07-26 | never |
-| PERSIAN LAND ESP 15 | 997,090 | 2026-08-10 | never |
-| Phlox ESP 15 | 997,340 | 2026-08-10 | never |
-| Debug Dance ESP 15 | 999,620 | 2026-08-16 | never |
+| blank | `NORMAL` | yes | yes |
+| **any** marker | `OPTIONAL` | yes | no |
 
-An A3 course-trial unlock is frequently a default song in World. The same applies
-to Extra Stage: an A3 Extra Stage song often becomes a normal World song.
-
-The remaining 28 marked charts are unplayed, so their markers cannot be checked
-against play history. They sit at exactly the levels that matter:
-
-```
-L14  6 charts    L15  11    L16  5    L17  4    L18  2
-```
-
-**Impact.** Under the classification in "Two chart-pool views", these 28 are
-dropped from `FloorRequirement` and `LampRequirement` denominators. If any is
-actually a normal World song, that requirement reads satisfied when it is not —
-the same false-positive direction as the gviz filter leak. Conversely the four
-known-wrong `course trial` charts have their scores discarded from every count,
-including a 999,620.
-
-**Marking is also incomplete**, independently of being stale: 32 of 10,821 rows
-carry any marker at all (0.30%). DDR World has more unlock-gated charts than
-that, so charts that *should* be excluded are silently counted in denominators.
-
-**Resolution (deferred by owner, 2026-08-23).** Review the 32 markers in the
-WORLD tab against World reality. This is 32 cells, not 10,821 rows. Until then,
-treat level 14–18 requirement results as approximate.
-
-Candidate mitigation not yet adopted: *played implies playable.* A chart with a
-World score is playable on World regardless of its marker. Derivable from data,
-self-correcting, and would have auto-fixed all four known-wrong markers.
-
-The adopted mitigation is the blocker display below.
+There is no `EXCLUDED` class. An unrecognised marker is `OPTIONAL` like any
+other — decided 2026-08-29, on the grounds that a marker means "not necessarily
+playable on demand" and so must never block progress. The accepted cost is that
+a new marker silently shrinks a denominator; the blocker display below is the
+counterweight.
 
 ### Blocker display (adopted)
 
-Incomplete marking is a *separate* defect from stale marking, and it fails the
-opposite way. A genuinely unplayable chart that carries no marker is counted in
-the denominator, so the requirement reads harder than reality and can be
-permanently unachievable. Unlike stale markers, this is not fixable by reviewing
-32 cells — it would require sweeping every unplayed 14–19 chart, which is
-hundreds.
+Marking incompleteness is a *separate* defect from marking staleness, and it
+fails the opposite way. A genuinely unplayable chart that carries no marker is
+counted in the denominator, so the requirement reads harder than reality and can
+be permanently unachievable. Unlike the stale markers — 32 cells, now reviewed —
+this is not fixable by inspection: it would mean sweeping every unplayed 14–19
+chart, which is hundreds.
 
 So it is surfaced rather than annotated. Blockers split into two categories that
-behave differently (measured 2026-08-23 against merged data):
+behave differently (measured 2026-08-29 against merged data, before `OPTIONAL`
+exclusion):
 
 | requirement | total | below floor | unplayed | played-low |
 |---|---|---|---|---|
-| Amethyst I L14 | 261 | 35 | 32 | 3 |
+| Amethyst I L14 | 262 | 35 | 32 | 3 |
 | Amethyst I L15 | 271 | 62 | 62 | 0 |
+| Amethyst I L17 | 148 | 32 | 32 | 0 |
+| Emerald I L16 | 217 | 60 | 51 | 9 |
 | Emerald I L17 | 148 | 48 | 32 | 16 |
-| Emerald V L14 | 261 | 123 | 32 | 91 |
 
 **Unplayed count is a property of the level, not the requirement** — L14 has 32
 unplayed charts regardless of target rank (L15: 62, L16: 51, L17: 32, L18: 48,
@@ -385,33 +381,27 @@ eliminate — so it must be visible in the UI, not only in a log.
 
 ### 4. Two chart-pool views
 
-The FAQ says Extra Stage-only songs "aren't required but count if earned." Each
-`availability` value is classified:
-
-| Class | Values | Counts in numerators | Counts in denominators |
-|---|---|---|---|
-| `NORMAL` | *(blank)* | yes | yes |
-| `OPTIONAL` | `extra exclusive`, `phase 2` | yes | no |
-| `EXCLUDED` | `course trial`, `Other`, `removed` | no | no |
-
-Unknown markers default to `EXCLUDED` with a logged warning — an allowlist, so a
-new marker added to the sheet is never silently counted. (Today's denylist misses
-`extra exclusive` and `phase 2` entirely.)
-
-`DDRDataset` exposes two views instead of one filtered frame, and each
-`Requirement` subclass declares which it consumes:
+Classification is the one rule from "Availability markers" above: blank is
+`NORMAL`, any marker is `OPTIONAL`. `DDRDataset` exposes two views instead of one
+filtered frame, and each `Requirement` subclass declares which it consumes:
 
 - **Count-based** (`PFCRequirement`, `AAARequirement`, `ClearRequirement`,
   `CeilingRequirement`, `SDP*`, `MFC*`, `MAPointsRequirement`) → `NORMAL | OPTIONAL`
 - **All-chart** (`FloorRequirement`, `LampRequirement`, `LampFloorRequirement`) → `NORMAL` only
 
-Concrete impact: `Eon Break CSP 18` is unplayed and `extra exclusive`. Today it
-drags level 18's lamp to `NO_LAMP` and blocks every 18s `FloorRequirement`.
 `get_level()` is the single chokepoint every requirement calls, so it is the seam
 to split.
 
-`removed` charts stay excluded from both, even though two are played with good
-scores. LIFE4's target counts are calibrated against the live chart pool.
+**No level filtering, ever.** MA points are earned from MFCs and SDPs at *any*
+difficulty, and the owner's history is weighted toward low levels: 12 MFCs and 81
+SDPs sit below level 8. Restricting the load to level 8+ — which is what the
+WORLD tab's filter view does, and what `gviz` therefore returned — costs **11.22
+MA points**, dropping the total from 31.72 to 20.50. Emerald I requires 12 and
+Emerald V requires 20, so that one filter is worth more than a rank tier. The
+only row filter the app applies is singles-vs-doubles.
+
+Filtering doubles is verified safe: the WORLD tab holds 4,669 doubles rows and
+**none has a score**, so no MA points are lost.
 
 ### 5. Requirements
 
@@ -444,7 +434,7 @@ New work:
 | # | Location | Status | Description |
 |---|---|---|---|
 | 1 | `requirements.py:154` | **Live** | `ClearRequirement` with no floor returns `len(level_scores)` — every chart at that level, played or not. `ClearRequirement(level=19, num=1)` evaluates `10 >= 1 → True` on 2 played 19s. The `return_zero=False` argument is accepted by `get_level_scores` and ignored. |
-| 2 | `ddr.py` filters | **Live** | `extra exclusive` and `phase 2` are not classified. See "two chart-pool views". |
+| 2 | `ddr.py` filters | **Live** | Availability is a denylist that drops marked charts from numerators too. Should be: blank counts everywhere, any marker counts if played but never blocks. See "Two chart-pool views". |
 | 3 | `backends.py` | **Live** | gviz inherits the sheet's filter view. See findings. |
 | 4 | `backends.py` / `ddr.py` | **Live** | WORLD's `P`/`M`/`Gr` columns break `get_sdps()`'s `Perf` lookup. Blocks the merge outright. |
 | 5 | `app.py:17` | **Live** | `data_source_info.pop("source")` mutates `st.secrets`, which persists across Streamlit reruns. |
@@ -522,9 +512,6 @@ stable data layer underneath.
 
 Non-blocking; resolve during the phase that needs them.
 
-1. **`galaxy brave` availability.** Two charts in the WORLD tab carry a marker not
-   present in the A3 tab. Likely event-exclusive and therefore `OPTIONAL`, but
-   unconfirmed. Defaults to `EXCLUDED` under the allowlist until classified.
 2. **MA point values above level 16.** `MFC_POINT_MAPPING` must be extended to 19.
    Values need to come from the LIFE4 site, not be interpolated.
 3. **Do Pearl or Topaz have requirements below level 14?** Determines how much the

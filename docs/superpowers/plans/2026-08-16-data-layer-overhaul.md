@@ -12,47 +12,53 @@
 
 ---
 
-## STATUS — resume here (last updated 2026-08-23)
+## STATUS — resume here (last updated 2026-08-29)
 
-**No code written yet.** Tasks 1–9 are all unstarted; `src/` and `app.py` are
+**No code written yet.** Tasks 1–10 are unstarted; `src/` and `app.py` are
 untouched. Everything so far is design.
 
-Tasks 1 and 7 have been **prototyped and verified** outside the repo — the code
-blocks in this plan were extracted, run, and checked against the live sheets:
+Tasks 1 and 7 are **prototyped and verified** — the code blocks in this plan were
+extracted, run, and checked against the live sheets on 2026-08-29:
 
-- 21/21 tests pass (10 schema, 11 merge)
-- full pipeline on real data: 6,152 charts, **0 orphans**, **1,689 played after
-  merge vs 265 from WORLD alone** (L14 +152, L15 +159, L16 +130, L18 +48)
+- **21/21 tests pass** (10 schema, 11 merge)
+- full pipeline on real data: 6,153 charts, **0 orphans**, **1,690 played after
+  merge vs 265 from WORLD alone**
 
-So Task 1 and Task 7 can be typed in as written and should pass first try.
+So Tasks 1 and 7 can be typed in as written and should pass first try.
 
 ### Blocked on Cole
 
 1. **Task 8 Step 1** — the `CTF` and trials tab **gids**. Click each tab, read
-   `gid=` from the URL. Only step in the plan that needs a human.
-2. **The 32 availability markers** in the WORLD tab (see the spec's
-   `KNOWN BAD DATA` section). Deferred by owner 2026-08-23. Level 14–18 numbers
-   are approximate until reviewed. Not blocking implementation.
+   `gid=` from the URL. The only step in the plan that needs a human.
 
-### Decided but not yet folded into the tasks
+### Resolved since the last session
 
-- **MA point values for 17–19.** The `ddr-terminology` skill gives the table:
-  **level 16+ is a flat 25 MFC / 2.5 SDP**. This resolves the open question that
-  Task 4 was written to defend against. Task 4 should extend
-  `MFC_POINT_MAPPING` to 19 with 25 each *and* keep `MAPointsUnknownLevel` for
-  anything still unmapped.
-- **Task 10 — blocker display.** Designed in the spec ("Blocker display
-  (adopted)"), not yet written as a task. Additive; does not change Tasks 1–9.
+- **Availability markers (2026-08-29).** Cole re-annotated the WORLD tab: 28 of
+  32 markers cleared. Only `removed` ×2 and `galaxy brave` ×2 remain, all
+  unplayed. Classification simplified to one rule — **blank = `NORMAL`, any
+  marker = `OPTIONAL`** (counts if played, never blocks). The `EXCLUDED` class
+  is gone. Denominators: L14 262→261, L17 148→145. Tasks 5 and 6 rewritten.
+- **MA points.** Values are known — flat **25 MFC / 2.5 SDP from level 16 up**.
+  Task 4 now extends `MFC_POINT_MAPPING` to 19 instead of only failing loudly.
+- **No level filtering, confirmed critical.** 12 MFCs and 81 SDPs sit below
+  level 8, worth **11.22 MA points** (31.72 total vs 20.50 filtered). Emerald I
+  needs 12, Emerald V needs 20. Filtering doubles is safe: 4,669 doubles rows,
+  none with a score.
 
 ### Open questions carried forward
 
-1. Whether `galaxy brave` (2 charts, WORLD only) is `OPTIONAL` or `EXCLUDED`.
-   Defaults to `EXCLUDED` under the allowlist.
-2. Whether Pearl or Topaz have requirements below level 14 — determines how far
+1. Whether Pearl or Topaz have requirements below level 14 — determines how far
    the `range(14, 20)` fix must generalise, and whether `record_on` matters
    (it disagrees with `score` on 52 rows, all at levels 11–13).
-3. Marking A3-carryover requirements in the UI, for honesty about the divergence
+2. Marking A3-carryover requirements in the UI, for honesty about the divergence
    from official LIFE4 submission rules.
+
+### Task 10 — blocker display
+
+Designed in the spec ("Blocker display (adopted)"), not yet written as a task.
+Additive; does not change Tasks 1–9. Still worth building: marking remains
+incomplete in the sense that unplayed charts dominate every floor requirement
+(Amethyst I L15: 62 below floor, all 62 unplayed).
 
 ### Phase 4 has no plan yet
 
@@ -674,14 +680,19 @@ satisfied against 10 charts of which 2 were played."
 
 ---
 
-## Task 4: MA points fail loudly above the mapped range
+## Task 4: MA points across the full level range
 
-Bug #6. `MFC_POINT_MAPPING` covers levels 1–16; `get_ma_points()` raises a bare
+Bug #6. `MFC_POINT_MAPPING` stops at level 16, so `get_ma_points()` raises a bare
 `KeyError` on the first SDP or MFC at 17+.
 
-The correct point values for 17–19 are **not yet known** and must come from the
-LIFE4 site — do not interpolate. This task converts the crash into an
-actionable error and adds the extension point.
+The values are known: the LIFE4 table is flat at **25 MFC / 2.5 SDP for level
+16 and above**. This task extends the mapping to 19 and keeps a named exception
+for anything still unmapped.
+
+**MA points are earned at every difficulty, not just 14+.** Measured 2026-08-29:
+12 MFCs and 81 SDPs sit below level 8, worth **11.22 points** — the difference
+between 31.72 and 20.50, where Emerald I needs 12 and Emerald V needs 20. No
+level filtering anywhere in the pipeline.
 
 **Files:**
 - Modify: `src/life4/life4/core.py`, `src/life4/ddr.py`
@@ -723,29 +734,65 @@ def test_pfc_with_ten_or_more_perfects_is_not_an_sdp():
     assert d.get_ma_points() == 0
 
 
-def test_sdp_above_the_mapped_range_raises_an_actionable_error():
-    d = dataset(pfc("a", 17, 4))
+def test_sdps_at_16_and_above_are_worth_a_flat_2_point_5():
+    d = dataset(pfc("a", 17, 4), pfc("b", 19, 2))
+    assert d.get_ma_points() == pytest.approx(5.0)
+
+
+def test_low_level_sdps_still_count_toward_ma_points():
+    # 12 MFCs and 81 SDPs in the real data sit below level 8, worth 11.22
+    # points. Any level filtering would silently discard them.
+    d = dataset(pfc("a", 3, 4), pfc("b", 7, 2))
+    assert d.get_ma_points() == pytest.approx(0.025 + 0.1)
+
+
+def test_a_level_with_no_mapping_raises_an_actionable_error():
+    d = dataset(pfc("a", 20, 4))
     with pytest.raises(MAPointsUnknownLevel) as exc:
         d.get_ma_points()
-    assert "17" in str(exc.value)
+    assert "20" in str(exc.value)
 ```
 
 - [ ] **Step 2: Run to verify it fails**
 
-Run: `uv run pytest tests/test_requirements.py -k ma_points -v`
+Run: `uv run pytest tests/test_requirements.py -k "ma_points or sdp" -v`
 Expected: FAIL — `ImportError: cannot import name 'MAPointsUnknownLevel'`
 
-- [ ] **Step 3: Add the exception**
+- [ ] **Step 3: Extend the mapping and add the exception**
 
-In `src/life4/life4/core.py`, below the mappings:
+In `src/life4/life4/core.py`, extend `MFC_POINT_MAPPING` past 16 and add the
+exception below the mappings:
 
 ```python
+MFC_POINT_MAPPING = {
+    1: 0.1,
+    2: 0.25,
+    3: 0.25,
+    4: 0.5,
+    5: 0.5,
+    6: 0.5,
+    7: 1,
+    8: 1,
+    9: 1,
+    10: 1,
+    11: 2,
+    12: 4,
+    13: 6,
+    14: 8,
+    15: 15,
+    # Flat from 16 up -- the LIFE4 table does not increase past this point.
+    16: 25,
+    17: 25,
+    18: 25,
+    19: 25,
+}
+
+
 class MAPointsUnknownLevel(Exception):
     """An SDP or MFC was earned at a level with no defined MA point value.
 
-    MFC_POINT_MAPPING covers levels 1-16. Values for 17+ must be sourced
-    from life4ddr.com rather than interpolated -- the existing curve
-    (8, 15, 25 at levels 14, 15, 16) is not a formula.
+    Difficulty ratings top out at 19 today. If DDR ever adds a 20, this fires
+    rather than silently scoring it as zero.
     """
 ```
 
@@ -775,23 +822,27 @@ Add `MAPointsUnknownLevel` to the existing `life4.life4.core` import in `ddr.py`
 - [ ] **Step 5: Run to verify they pass**
 
 Run: `uv run pytest tests/test_requirements.py -v`
-Expected: 7 passed
+Expected: 9 passed
 
 - [ ] **Step 6: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
 git add src/life4/life4/core.py src/life4/ddr.py tests/test_requirements.py
-git commit -m "fix(core): raise an actionable error for MA points above level 16"
+git commit -m "fix(core): MA points across the full level range
+
+Extends MFC_POINT_MAPPING to 19 (flat 25 from level 16 up) and names the
+exception for anything unmapped. Low-level SDPs and MFCs matter: 12 MFCs
+and 81 SDPs sit below level 8, worth 11.22 of the owner's 31.72 points."
 ```
 
 ---
 
 ## Task 5: Availability classification
 
-Bug #2. `extra exclusive` and `phase 2` are currently counted in every
-denominator. Per the FAQ, Extra Stage songs are "not required but count if
-earned."
+The owner re-annotated the WORLD tab on 2026-08-29. Four markers remain
+(`removed` x2, `galaxy brave` x2), and the rule is: **a marked chart counts if
+played, but never counts against you.**
 
 **Files:**
 - Create: `src/life4/data/availability.py`
@@ -799,7 +850,7 @@ earned."
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `AvailabilityClass` (`NORMAL`, `OPTIONAL`, `EXCLUDED`); `ChartPool` (`REQUIRED`, `EARNED`); `classify(value) -> AvailabilityClass`; `pool_classes(pool: ChartPool) -> frozenset[AvailabilityClass]`.
+- Produces: `AvailabilityClass` (`NORMAL`, `OPTIONAL`); `ChartPool` (`REQUIRED`, `EARNED`); `classify(value) -> AvailabilityClass`; `pool_classes(pool: ChartPool) -> frozenset[AvailabilityClass]`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -819,22 +870,18 @@ from life4.data.availability import (
 def test_blank_availability_is_a_normal_chart():
     assert classify(np.nan) is AvailabilityClass.NORMAL
     assert classify(None) is AvailabilityClass.NORMAL
+    assert classify("") is AvailabilityClass.NORMAL
 
 
-def test_extra_stage_and_phase_two_are_optional():
-    assert classify("extra exclusive") is AvailabilityClass.OPTIONAL
-    assert classify("phase 2") is AvailabilityClass.OPTIONAL
+def test_any_marker_is_optional():
+    for marker in ("removed", "galaxy brave", "course trial", "phase 2"):
+        assert classify(marker) is AvailabilityClass.OPTIONAL
 
 
-def test_removed_and_course_trial_are_excluded():
-    assert classify("removed") is AvailabilityClass.EXCLUDED
-    assert classify("course trial") is AvailabilityClass.EXCLUDED
-    assert classify("Other") is AvailabilityClass.EXCLUDED
-
-
-def test_unknown_marker_defaults_to_excluded(caplog):
-    assert classify("galaxy brave") is AvailabilityClass.EXCLUDED
-    assert "galaxy brave" in caplog.text
+def test_an_unrecognised_marker_is_optional_and_never_blocks():
+    # Decided 2026-08-29: a marker means "not necessarily playable on demand",
+    # so it must never block progress. One rule, no lookup table.
+    assert classify("some future event") is AvailabilityClass.OPTIONAL
 
 
 def test_required_pool_excludes_optional_charts():
@@ -857,12 +904,9 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'life4.data.availabilit
 Create `src/life4/data/availability.py`:
 
 ```python
-import logging
 from enum import Enum
 
 import pandas as pd
-
-logger = logging.getLogger(__name__)
 
 
 class AvailabilityClass(Enum):
@@ -870,30 +914,21 @@ class AvailabilityClass(Enum):
 
     NORMAL = "normal"
     OPTIONAL = "optional"
-    EXCLUDED = "excluded"
 
 
 class ChartPool(Enum):
     """Which charts a requirement is evaluated against.
 
     REQUIRED -- "all 16s over 955k" style requirements. Optional charts must
-    not appear here or an unplayed Extra Stage chart blocks the requirement.
+    not appear here, or an unplayable chart blocks the requirement forever.
 
-    EARNED -- "PFC 26 16s" style counts. Optional charts count if played,
-    per the FAQ: Extra Stage songs "aren't required but count if earned."
+    EARNED -- "PFC 26 16s" style counts. Optional charts count if played: a
+    chart removed from the game still credits the score you earned on it.
     """
 
     REQUIRED = "required"
     EARNED = "earned"
 
-
-_CLASSES = {
-    "extra exclusive": AvailabilityClass.OPTIONAL,
-    "phase 2": AvailabilityClass.OPTIONAL,
-    "course trial": AvailabilityClass.EXCLUDED,
-    "Other": AvailabilityClass.EXCLUDED,
-    "removed": AvailabilityClass.EXCLUDED,
-}
 
 _POOLS = {
     ChartPool.REQUIRED: frozenset({AvailabilityClass.NORMAL}),
@@ -904,18 +939,15 @@ _POOLS = {
 
 
 def classify(value) -> AvailabilityClass:
-    """An allowlist: an unrecognised marker is excluded, never silently counted."""
-    if value is None or pd.isna(value):
+    """Blank means an ordinary chart; any marker means "counts, never blocks".
+
+    There is deliberately no lookup table and no EXCLUDED class. A marker means
+    the chart is not necessarily playable on demand, so it must never count
+    against the player -- but a score earned on it still counts for them.
+    """
+    if value is None or pd.isna(value) or str(value).strip() == "":
         return AvailabilityClass.NORMAL
-    try:
-        return _CLASSES[value]
-    except KeyError:
-        logger.warning(
-            "Unrecognised availability marker %r; excluding these charts. "
-            "Classify it in life4.data.availability if it should count.",
-            value,
-        )
-        return AvailabilityClass.EXCLUDED
+    return AvailabilityClass.OPTIONAL
 
 
 def pool_classes(pool: ChartPool) -> frozenset[AvailabilityClass]:
@@ -925,14 +957,14 @@ def pool_classes(pool: ChartPool) -> frozenset[AvailabilityClass]:
 - [ ] **Step 4: Run to verify they pass**
 
 Run: `uv run pytest tests/test_availability.py -v`
-Expected: 6 passed
+Expected: 5 passed
 
 - [ ] **Step 5: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
 git add src/life4/data/availability.py tests/test_availability.py
-git commit -m "feat(data): classify chart availability as normal/optional/excluded"
+git commit -m "feat(data): marked charts count when played but never block"
 ```
 
 ---
@@ -955,44 +987,46 @@ Append to `tests/test_requirements.py`:
 from life4.life4.ranks.requirements import FloorRequirement, PFCRequirement
 
 
-def test_unplayed_optional_chart_does_not_block_a_floor_requirement():
+def test_unplayed_marked_chart_does_not_block_a_floor_requirement():
     d = dataset(
-        played("a", 18, 900_000),
-        chart(title="eon break", level=18, availability="extra exclusive"),
+        played("a", 17, 900_000),
+        chart(title="roll the dice", level=17, availability="galaxy brave"),
     )
-    assert FloorRequirement(level=18, floor=850_000).is_satisfied(d)
+    assert FloorRequirement(level=17, floor=850_000).is_satisfied(d)
 
 
-def test_played_optional_chart_counts_toward_a_pfc_count():
+def test_played_marked_chart_counts_toward_a_pfc_count():
     d = dataset(
-        pfc("a", 16, 4),
+        pfc("a", 17, 4),
         chart(
-            title="metamorphic",
-            level=16,
-            availability="phase 2",
+            title="blizzard of arrows",
+            level=17,
+            availability="galaxy brave",
             score=999_960,
             perfect=4,
             record_on="1/1/2026",
             pfc_date="1/2/2026",
         ),
     )
-    assert PFCRequirement(level=16, num=2).is_satisfied(d)
+    assert PFCRequirement(level=17, num=2).is_satisfied(d)
 
 
-def test_excluded_charts_count_in_neither_pool():
+def test_a_removed_chart_still_credits_a_score_you_earned_on_it():
+    # The owner's rule: a marked chart counts if played, but never counts
+    # against you. A chart cleared before it left the game still credits.
     d = dataset(
         played("a", 16, 900_000),
         chart(title="realize", level=16, availability="removed", score=999_000,
-              record_on="1/1/2026", pfc_date="1/2/2026"),
+              perfect=4, record_on="1/1/2026", pfc_date="1/2/2026"),
     )
-    assert not PFCRequirement(level=16, num=1).is_satisfied(d)
+    assert PFCRequirement(level=16, num=1).is_satisfied(d)
     assert FloorRequirement(level=16, floor=850_000).is_satisfied(d)
 ```
 
 - [ ] **Step 2: Run to verify they fail**
 
 Run: `uv run pytest tests/test_requirements.py -k optional -v`
-Expected: FAIL — the unplayed `extra exclusive` chart drags level 18's lamp to `NO_LAMP`, so `FloorRequirement.is_satisfied` returns False.
+Expected: FAIL — the unplayed `galaxy brave` chart drags level 17's lamp to `NO_LAMP`, so `FloorRequirement.is_satisfied` returns False.
 
 - [ ] **Step 3: Add pool filtering to DDRDataset**
 
@@ -1637,7 +1671,7 @@ planning it before reading them would produce placeholders. It gets its own plan
 
 1. MA point values for levels 17–19 (Task 4 makes the gap fail loudly; the
    values still need sourcing).
-2. Whether `galaxy brave` should be `OPTIONAL` rather than `EXCLUDED`.
+2. RESOLVED 2026-08-29: `galaxy brave` is `OPTIONAL`, like every marker.
 3. Whether Pearl or Topaz have requirements below level 14.
 4. Marking A3-carryover requirements in the UI, for honesty about the
    divergence from official LIFE4 submission rules.
