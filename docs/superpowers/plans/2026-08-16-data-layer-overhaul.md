@@ -1692,6 +1692,287 @@ git commit -m "refactor(app): drop the Click wrapper and wire the merged data la
 
 ---
 
+---
+
+## Task 10: Blocker display
+
+Shows WHICH charts are preventing an unsatisfied requirement. Counts always
+inline; names behind an `st.popover` containing a scrollable table.
+
+Designed in the spec under "Blocker display (adopted)". The motivation: marking
+of unplayable charts is incomplete, so a genuinely unplayable chart with no
+marker sits in a denominator and makes its requirement permanently unachievable
+with no visible cause. Rather than annotate hundreds of charts speculatively,
+the app names the handful currently blocking you.
+
+Blockers split into two kinds that behave differently. **Unplayed** charts are
+a property of the level (L14 has 32, L15 62, L16 51, L17 32) and shrink as you
+play; whatever is still unplayed at the end IS the unplayable set. **Played but
+below target** is a practice list that grows with rank and whose names are never
+interesting. So the counts are shown separately.
+
+Measured on live data, Emerald I: 14s 47 blockers (32 unplayed, 15 to improve);
+15s 73 (62/11); 16s 60 (51/9); 17s 46 (30/16).
+
+**Files:**
+- Modify: `src/life4/life4/ranks/requirements.py`, `src/life4/life4_ui.py`, `pyproject.toml`
+- Test: `tests/test_blockers.py`
+
+**Interfaces:**
+- Consumes: `DDRDataset.get_level(level, *, pool)`, `ChartPool`, `Lamp`.
+- Produces: `Requirement.blockers(data) -> pd.DataFrame` with columns `title, diff, score, needs`, sorted unplayed-first then furthest-from-target. Base returns an empty frame; overridden on `FloorRequirement`, `LampRequirement`, `LampFloorRequirement`. Also adds `__str__` to `PFCRequirement` and `AAARequirement`.
+
+- [ ] **Step 1: Write the failing tests**
+
+Create `tests/test_blockers.py`:
+
+```python
+from conftest import chart, dataset
+
+from life4.ddr import Lamp
+from life4.life4.ranks.requirements import (
+    AAARequirement,
+    FloorRequirement,
+    LampFloorRequirement,
+    LampRequirement,
+    PFCRequirement,
+)
+
+
+def played(title, level, score, **extra):
+    return chart(title=title, level=level, score=score, record_on="1/1/2026", **extra)
+
+
+def test_floor_blockers_list_unplayed_first_then_low_scores():
+    data = dataset(
+        played("a", 16, 999_000),
+        played("b", 16, 940_000),
+        chart(title="c", level=16),
+    )
+    blockers = FloorRequirement(level=16, floor=950_000).blockers(data)
+    assert list(blockers["title"]) == ["c", "b"]
+    assert list(blockers["needs"]) == ["unplayed", "+10,000"]
+
+
+def test_floor_blockers_are_empty_when_every_chart_clears_the_floor():
+    data = dataset(played("a", 16, 999_000))
+    assert FloorRequirement(level=16, floor=950_000).blockers(data).empty
+
+
+def test_lamp_blockers_name_the_current_and_target_lamp():
+    data = dataset(
+        played("full_combo", 16, 980_000, fc_date="1/2/2026"),
+        played("just_cleared", 16, 940_000),
+    )
+    blockers = LampRequirement(level=16, lamp=Lamp.Blue).blockers(data)
+    assert list(blockers["title"]) == ["just_cleared"]
+    assert list(blockers["needs"]) == ["Clear -> Blue"]
+
+
+def test_lamp_floor_blockers_merge_both_and_do_not_duplicate_a_chart():
+    data = dataset(
+        played("weak", 16, 900_000),
+        chart(title="unplayed", level=16),
+    )
+    blockers = LampFloorRequirement(level=16, lamp=Lamp.Blue, floor=950_000).blockers(data)
+    assert len(blockers) == len(set(zip(blockers["title"], blockers["diff"])))
+    assert set(blockers["title"]) == {"weak", "unplayed"}
+
+
+def test_count_based_requirements_report_no_blockers():
+    # "PFC 5 16s" has no denominator, so there is no chart to name.
+    data = dataset(played("a", 16, 999_000))
+    assert PFCRequirement(level=16, num=5).blockers(data).empty
+
+
+def test_blockers_respect_the_required_pool():
+    # A marked chart must never appear as a blocker -- that is the whole point
+    # of the REQUIRED pool.
+    data = dataset(
+        played("a", 16, 999_000),
+        chart(title="marked", level=16, availability="removed"),
+    )
+    assert FloorRequirement(level=16, floor=950_000).blockers(data).empty
+
+
+def test_pfc_and_aaa_have_stable_string_forms():
+    # The checkbox key embeds str(requirement); the default object.__str__
+    # would embed a memory address and change on module reload.
+    assert str(PFCRequirement(level=14, num=60)) == "PFC 60 14s"
+    assert str(PFCRequirement(level=18, num=1)) == "PFC an 18"
+    assert str(AAARequirement(level=15, num=105)) == "AAA 105 15s"
+    assert str(AAARequirement(level=18, num=1)) == "AAA an 18"
+    assert "object at 0x" not in str(PFCRequirement(level=14, num=1))
+```
+
+- [ ] **Step 2: Run to verify they fail**
+
+Run: `uv run pytest tests/test_blockers.py -v`
+Expected: FAIL — `AttributeError: 'FloorRequirement' object has no attribute 'blockers'`
+
+- [ ] **Step 3: Add `blockers` to the requirement classes**
+
+In `src/life4/life4/ranks/requirements.py`, add `import pandas as pd` at the top,
+then on the `Requirement` ABC:
+
+```python
+    #: Columns every blockers() frame returns, so the UI can render them uniformly.
+    BLOCKER_COLUMNS = ("title", "diff", "score", "needs")
+
+    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+        """Charts preventing this requirement, worst first.
+
+        Empty for count-based requirements ("PFC 5 16s"), which have no
+        denominator and therefore no specific chart to name.
+        """
+        return pd.DataFrame(columns=list(self.BLOCKER_COLUMNS))
+```
+
+On `FloorRequirement`:
+
+```python
+    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+        charts = data.get_level(self.level, pool=self.pool)
+        below = charts[charts["score"].isna() | (charts["score"] < self.floor)]
+        out = below[["title", "diff", "score"]].copy()
+        out["needs"] = [
+            "unplayed" if pd.isna(score) else f"+{self.floor - score:,.0f}"
+            for score in out["score"]
+        ]
+        return out.sort_values("score", na_position="first").reset_index(drop=True)
+```
+
+On `LampRequirement`:
+
+```python
+    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+        charts = data.get_level(self.level, pool=self.pool)
+        below = charts[charts["lamp"] < self.lamp]
+        out = below[["title", "diff", "score", "lamp"]].copy()
+        out["needs"] = [f"{Lamp(lamp).name} -> {self.lamp.name}" for lamp in out["lamp"]]
+        out = out.drop(columns="lamp")
+        return out.sort_values("score", na_position="first").reset_index(drop=True)
+```
+
+On `LampFloorRequirement` (it owns two delegates, so combine theirs):
+
+```python
+    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+        combined = pd.concat(
+            [
+                self.lamp_requirement.blockers(data),
+                self.floor_requirement.blockers(data),
+            ],
+            ignore_index=True,
+        )
+        deduped = combined.drop_duplicates(subset=["title", "diff"], keep="first")
+        return deduped.sort_values("score", na_position="first").reset_index(drop=True)
+```
+
+- [ ] **Step 4: Add `__str__` to `PFCRequirement` and `AAARequirement`**
+
+Both build their label inline inside `display_str`. Extract it so the checkbox
+key is stable. On `PFCRequirement`:
+
+```python
+    def __str__(self):
+        if self.num_pfc == 1:
+            return f"PFC {_article_for_level(self.level)} {self.level}"
+        return f"PFC {self.num_pfc} {self.level}s"
+```
+
+On `AAARequirement`:
+
+```python
+    def __str__(self):
+        if self.num_AAA == 1:
+            return f"AAA {_article_for_level(self.level)} {self.level}"
+        return f"AAA {self.num_AAA} {self.level}s"
+```
+
+Then simplify each `display_str` to start from `str_to_display = str(self)`
+instead of rebuilding the same text. Do not change the rendered wording.
+
+- [ ] **Step 5: Run to verify they pass**
+
+Run: `uv run pytest tests/test_blockers.py -v`
+Expected: 7 passed
+
+- [ ] **Step 6: Render blockers in the UI**
+
+In `src/life4/life4_ui.py`, replace `create_checkbox`:
+
+```python
+    def create_checkbox(self, requirement: Requirement, group: str):
+        satisfied = requirement.is_satisfied(self.data)
+        st.checkbox(
+            requirement.display_str(self.data),
+            disabled=True,
+            value=satisfied,
+            key=f"{self.life4_rank}|{group}|{requirement}",
+        )
+        if satisfied:
+            return
+
+        blockers = requirement.blockers(self.data)
+        if blockers.empty:
+            return
+
+        unplayed = int(blockers["score"].isna().sum())
+        to_improve = len(blockers) - unplayed
+        label = f"{unplayed} unplayed · {to_improve} to improve"
+        with st.popover(label, width="stretch"):
+            st.dataframe(blockers, height=240, hide_index=True, width="stretch")
+```
+
+`st.popover` is required here, not `st.expander` — these render inside a rank
+expander and Streamlit forbids nesting expanders. Verified: a popover inside an
+expander raises nothing.
+
+- [ ] **Step 7: Clear two pieces of dead weight**
+
+`click` is no longer imported anywhere (the Click wrapper was removed in Task 9):
+
+```bash
+uv remove click
+```
+
+And `app.py` still calls `st.image(..., use_container_width=True)`, which
+Streamlit deprecates after 2025-12-31. Replace with `width="stretch"`.
+
+- [ ] **Step 8: Smoke-test the rendered app**
+
+No browser is needed — drive it through Streamlit's own test harness:
+
+```bash
+uv run python -c "
+from streamlit.testing.v1 import AppTest
+at = AppTest.from_file('app.py', default_timeout=240)
+at.run()
+assert not at.exception, [str(e.value) for e in at.exception]
+print('checkboxes:', len(at.checkbox))
+print('popovers:  ', len(at.popover))
+"
+```
+
+Expected: no exceptions, ~30 checkboxes, and a non-zero popover count.
+
+- [ ] **Step 9: Commit**
+
+```bash
+uv run ruff check . && uv run ruff format .
+git add src/life4/life4/ranks/requirements.py src/life4/life4_ui.py app.py pyproject.toml uv.lock tests/test_blockers.py
+git commit -m "feat(ui): name the charts blocking each unsatisfied requirement
+
+Counts inline, names behind a popover with a scrollable table. Unplayed
+charts sort first -- they are the availability-suspect set and the one
+that shrinks as you play.
+
+Also gives PFCRequirement and AAARequirement a __str__, so the checkbox
+key stops embedding a memory address, and drops the now-unused click
+dependency."
+```
+
 ## Not in this plan
 
 **Phase 4 — DDR World requirements (Pearl → Emerald).** Transcribing 20 tiers of
