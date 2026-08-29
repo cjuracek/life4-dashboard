@@ -51,7 +51,7 @@ def main() -> None:
 
     _, center, _ = st.columns(3)
     with center:
-        st.image("assets/life4-logo.png", use_container_width=True)
+        st.image("assets/life4-logo.png", width="stretch")
 
     rank_choice = st.selectbox("Select rank", ("Amethyst", "Emerald"), index=1)
     rank = amethyst if rank_choice == "Amethyst" else emerald

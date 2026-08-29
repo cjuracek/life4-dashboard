@@ -8,7 +8,6 @@ authors = [
 requires-python = ">=3.11"
 readme = "README.md"
 dependencies = [
-    "click>=8.1.8",
     "openpyxl>=3.1.5",
     "pandas>=2.2.3",
     "pydantic>=2.10.4",

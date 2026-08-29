@@ -13,12 +13,25 @@ class Life4RankDisplay:
         self.data = data
 
     def create_checkbox(self, requirement: Requirement, group: str):
+        satisfied = requirement.is_satisfied(self.data)
         st.checkbox(
             requirement.display_str(self.data),
             disabled=True,
-            value=requirement.is_satisfied(self.data),
+            value=satisfied,
             key=f"{self.life4_rank}|{group}|{requirement}",
         )
+        if satisfied:
+            return
+
+        blockers = requirement.blockers(self.data)
+        if blockers.empty:
+            return
+
+        unplayed = int(blockers["score"].isna().sum())
+        to_improve = len(blockers) - unplayed
+        label = f"{unplayed} unplayed · {to_improve} to improve"
+        with st.popover(label, width="stretch"):
+            st.dataframe(blockers, height=240, hide_index=True, width="stretch")
 
     def _visualize_reqs(self, requirements: List[Requirement], group: str):
         requirement_levels = range(14, 20)
