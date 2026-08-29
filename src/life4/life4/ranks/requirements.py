@@ -33,8 +33,7 @@ class Requirement(ABC):
 
 
 class ProgressDisplay(Protocol):
-    def get_progress(self) -> str:
-        ...
+    def get_progress(self) -> str: ...
 
 
 class LampRequirement(Requirement, ProgressDisplay):
