@@ -3,7 +3,11 @@ import pytest
 from conftest import chart, dataset
 
 from life4.life4.core import MAPointsUnknownLevel
-from life4.life4.ranks.requirements import ClearRequirement
+from life4.life4.ranks.requirements import (
+    ClearRequirement,
+    FloorRequirement,
+    PFCRequirement,
+)
 
 
 def played(title, level, score):
@@ -87,3 +91,46 @@ def test_a_level_with_no_mapping_raises_an_actionable_error():
     with pytest.raises(MAPointsUnknownLevel) as exc:
         d.get_ma_points()
     assert "20" in str(exc.value)
+
+
+def test_unplayed_marked_chart_does_not_block_a_floor_requirement():
+    d = dataset(
+        played("a", 17, 900_000),
+        chart(title="roll the dice", level=17, availability="galaxy brave"),
+    )
+    assert FloorRequirement(level=17, floor=850_000).is_satisfied(d)
+
+
+def test_played_marked_chart_counts_toward_a_pfc_count():
+    d = dataset(
+        pfc("a", 17, 4),
+        chart(
+            title="blizzard of arrows",
+            level=17,
+            availability="galaxy brave",
+            score=999_960,
+            perfect=4,
+            record_on="1/1/2026",
+            pfc_date="1/2/2026",
+        ),
+    )
+    assert PFCRequirement(level=17, num=2).is_satisfied(d)
+
+
+def test_a_removed_chart_still_credits_a_score_you_earned_on_it():
+    # The owner's rule: a marked chart counts if played, but never counts
+    # against you. A chart cleared before it left the game still credits.
+    d = dataset(
+        played("a", 16, 900_000),
+        chart(
+            title="realize",
+            level=16,
+            availability="removed",
+            score=999_000,
+            perfect=4,
+            record_on="1/1/2026",
+            pfc_date="1/2/2026",
+        ),
+    )
+    assert PFCRequirement(level=16, num=1).is_satisfied(d)
+    assert FloorRequirement(level=16, floor=850_000).is_satisfied(d)

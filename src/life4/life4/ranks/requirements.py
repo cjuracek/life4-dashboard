@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Protocol
 
+from life4.data.availability import ChartPool
 from life4.ddr import Lamp
 from life4.life4.core import Life4RankEnum
 
@@ -22,6 +23,7 @@ def _format_score(score: int) -> str:
 
 class Requirement(ABC):
     multiple_levels: bool
+    pool: ChartPool = ChartPool.EARNED
 
     @abstractmethod
     def is_satisfied(self, data: "DDRDataset"):
@@ -40,6 +42,7 @@ class LampRequirement(Requirement, ProgressDisplay):
     """E.g. 'Red Lamp' (for a given difficulty)"""
 
     multiple_levels = False
+    pool = ChartPool.REQUIRED
 
     def __init__(self, level: int, lamp: "Lamp"):
         self.level = level
@@ -49,7 +52,7 @@ class LampRequirement(Requirement, ProgressDisplay):
         return f"{self.lamp.name} Lamp"
 
     def get_progress(self, data: "DDRDataset"):
-        lamps = data.get_lamps_for_level(self.level)
+        lamps = data.get_lamps_for_level(self.level, pool=self.pool)
         valid_lamps = [lamp for lamp in lamps if lamp >= self.lamp]
         return f"{len(valid_lamps)}/{len(lamps)}"
 
@@ -60,7 +63,7 @@ class LampRequirement(Requirement, ProgressDisplay):
         return str_to_display
 
     def is_satisfied(self, data: "DDRDataset"):
-        lamp = data.get_level_lamp(level=self.level)
+        lamp = data.get_level_lamp(level=self.level, pool=self.pool)
         return lamp >= self.lamp
 
 
@@ -207,6 +210,7 @@ class FloorRequirement(Requirement, ProgressDisplay):
     """E.g. 'All 16s over 920k'"""
 
     multiple_levels = False
+    pool = ChartPool.REQUIRED
 
     def __init__(
         self,
@@ -229,25 +233,30 @@ class FloorRequirement(Requirement, ProgressDisplay):
         return req_str
 
     def is_satisfied(self, data: "DDRDataset"):
-        if data.get_level_lamp(self.level) == Lamp.NO_LAMP:
+        if data.get_level_lamp(self.level, pool=self.pool) == Lamp.NO_LAMP:
             return False
 
         if self.exception_floor:
             if not data.get_songs_below_threshold(
-                level=self.level, threshold=self.exception_floor
+                level=self.level, threshold=self.exception_floor, pool=self.pool
             ).empty:
                 return False
 
         songs_below_threshold = data.get_songs_below_threshold(
-            level=self.level, threshold=self.floor
+            level=self.level, threshold=self.floor, pool=self.pool
         )
         return len(songs_below_threshold) <= self.num_exceptions
 
     def get_progress(self, data: "DDRDataset"):
-        total_songs = len(data.get_level(self.level))
-        songs_above_floor = len(data.get_songs_above_threshold(self.level, self.floor))
+        total_songs = len(data.get_level(self.level, pool=self.pool))
+        songs_above_floor = len(
+            data.get_songs_above_threshold(self.level, self.floor, pool=self.pool)
+        )
         song_exceptions = data.get_songs_in_range(
-            level=self.level, lower=self.exception_floor, upper=self.floor
+            level=self.level,
+            lower=self.exception_floor,
+            upper=self.floor,
+            pool=self.pool,
         )
         valid_exceptions = min(len(song_exceptions), self.num_exceptions)
         return f"{songs_above_floor + valid_exceptions}/{total_songs}"
@@ -263,6 +272,7 @@ class LampFloorRequirement(Requirement, ProgressDisplay):
     """Combined lamp and floor requirement for a single level."""
 
     multiple_levels = False
+    pool = ChartPool.REQUIRED
 
     def __init__(
         self,

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from life4.data.availability import ChartPool, classify, pool_classes
 from life4.life4.core import MAPointsUnknownLevel, MFC_POINT_MAPPING, SDP_POINT_MAPPING
 
 if TYPE_CHECKING:
@@ -32,6 +33,7 @@ class DDRDataset:
     def __init__(self, data: pd.DataFrame, trials: "list[Life4Trial] | None" = None):
         self._data = data.copy()
         self._data["lamp"] = self._data.apply(self._get_lamp, axis=1)
+        self._data["availability_class"] = self._data["availability"].map(classify)
         self.trials = list(trials or [])
 
     def _get_lamp(self, row) -> Lamp:
@@ -50,46 +52,59 @@ class DDRDataset:
             return Lamp.Red
         return Lamp.Clear
 
-    def get_level(self, level: int) -> pd.DataFrame:
-        return self._data[self._data["level"] == level]
+    def charts(self, pool: ChartPool = ChartPool.EARNED) -> pd.DataFrame:
+        allowed = pool_classes(pool)
+        return self._data[self._data["availability_class"].isin(allowed)]
 
-    def get_lamp(self, lamp: Lamp) -> pd.DataFrame:
-        return self._data[self._data["lamp"] == lamp]
+    def get_level(self, level: int, *, pool: ChartPool = ChartPool.EARNED):
+        charts = self.charts(pool)
+        return charts[charts["level"] == level]
 
-    def get_lamps_for_level(self, level: int) -> list[Lamp]:
-        return self.get_level(level)["lamp"].to_list()
+    def get_lamp(self, lamp: Lamp, *, pool: ChartPool = ChartPool.EARNED):
+        charts = self.charts(pool)
+        return charts[charts["lamp"] == lamp]
 
-    def get_level_lamp(self, level: int) -> Lamp:
-        lamps = self.get_lamps_for_level(level)
+    def get_lamps_for_level(
+        self, level: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> list[Lamp]:
+        return self.get_level(level, pool=pool)["lamp"].to_list()
+
+    def get_level_lamp(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> Lamp:
+        lamps = self.get_lamps_for_level(level, pool=pool)
         return min(lamps) if lamps else Lamp.NO_LAMP
 
-    def get_num_pfcs(self, level: int) -> int:
-        return int((self.get_level(level)["lamp"] == Lamp.Gold).sum())
+    def get_num_pfcs(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> int:
+        return int((self.get_level(level, pool=pool)["lamp"] == Lamp.Gold).sum())
 
-    def get_num_AAA(self, level: int) -> int:
-        return int((self.get_level(level)["score"] >= 990_000).sum())
+    def get_num_AAA(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> int:
+        return int((self.get_level(level, pool=pool)["score"] >= 990_000).sum())
 
-    def get_ceiling(self, level: int):
-        return self.get_level(level)["score"].max()
+    def get_ceiling(self, level: int, *, pool: ChartPool = ChartPool.EARNED):
+        return self.get_level(level, pool=pool)["score"].max()
 
-    def get_songs_below_threshold(self, level: int, threshold: int) -> pd.DataFrame:
-        level_songs = self.get_level(level)
+    def get_songs_below_threshold(
+        self, level: int, threshold: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> pd.DataFrame:
+        level_songs = self.get_level(level, pool=pool)
         return level_songs[level_songs["score"] < threshold]
 
-    def get_songs_above_threshold(self, level: int, threshold: int) -> pd.DataFrame:
-        level_songs = self.get_level(level)
+    def get_songs_above_threshold(
+        self, level: int, threshold: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> pd.DataFrame:
+        level_songs = self.get_level(level, pool=pool)
         return level_songs[level_songs["score"] >= threshold]
 
-    def get_songs_in_range(self, level: int, lower: int, upper: int) -> pd.DataFrame:
-        level_songs = self.get_level(level)
+    def get_songs_in_range(
+        self, level: int, lower: int, upper: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> pd.DataFrame:
+        level_songs = self.get_level(level, pool=pool)
         return level_songs[
             (level_songs["score"] >= lower) & (level_songs["score"] < upper)
         ]
 
-    def get_sdps(self) -> pd.DataFrame:
-        return self._data[
-            (self._data["lamp"] == Lamp.Gold) & (self._data["perfect"] < 10)
-        ]
+    def get_sdps(self, *, pool: ChartPool = ChartPool.EARNED) -> pd.DataFrame:
+        charts = self.charts(pool)
+        return charts[(charts["lamp"] == Lamp.Gold) & (charts["perfect"] < 10)]
 
     def get_ma_points(self) -> float:
         sdp_levels = self.get_sdps()["level"]
@@ -106,6 +121,8 @@ class DDRDataset:
         mfc_points = sum(MFC_POINT_MAPPING[level] for level in mfc_levels)
         return sdp_points + mfc_points
 
-    def get_level_scores(self, level: int) -> pd.Series:
+    def get_level_scores(
+        self, level: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> pd.Series:
         """Scores for charts actually played at this level. Unplayed excluded."""
-        return self.get_level(level)["score"].dropna()
+        return self.get_level(level, pool=pool)["score"].dropna()
