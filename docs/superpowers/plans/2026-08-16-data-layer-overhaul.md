@@ -77,6 +77,7 @@ blind would produce placeholders.
 - Only these 11 columns are read: `diff` `level` `title` `score` `perfect` `record_on` `pfc_date` `gfc_date` `fc_date` `life4_date` `availability`. Everything else in the sheet is ignored on purpose. Mapping is **by name**; the duplicate `M` in the WORLD header is Marvelous and Miss, both unread.
 - Streamlit floor is `>=1.62`. Use `st.cache_data(refresh_mode="background")` for data refresh; `st.popover` (not a nested `st.expander`, which Streamlit forbids) for in-expander disclosure.
 - `uv run pytest` is the test command. `uv run ruff check .` must pass before every commit.
+- The project is installed **editable from `src/`** (setuptools `packages.find`, added during setup). `import life4` works under `uv run` with no `sys.path` manipulation — this is what lets Task 9 delete `sys.path.append("src")` from `app.py`.
 
 ---
 
