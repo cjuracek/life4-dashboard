@@ -551,6 +551,12 @@ raising on an empty level:
 Delete `_validate_data` and the `filter_*` constructor arguments entirely —
 filtering now happens upstream.
 
+**Deliberately left for later tasks:** `get_level_scores` (Task 3) and
+`get_ma_points` (Task 4) still reference the old capitalised column names after
+this task. They are rewritten wholesale in those tasks and are not exercised by
+`test_lamps.py`, so leaving them is expected — do not patch them here, and do not
+treat them as an oversight.
+
 - [ ] **Step 5: Update requirements.py column references**
 
 In `src/life4/life4/ranks/requirements.py`, replace `["Level"]` with
@@ -1427,6 +1433,12 @@ class GoogleSheetLoader:
         response = requests.get(url, timeout=self.timeout)
         response.raise_for_status()
         return normalize(response.text, tab_name)
+
+    def load_trials(self, gid: int) -> pd.DataFrame:
+        """Trials use their own column names and are not normalized."""
+        response = requests.get(self.csv_url(gid), timeout=self.timeout)
+        response.raise_for_status()
+        return pd.read_csv(io.StringIO(response.text))
 ```
 
 - [ ] **Step 6: Delete the old backend**
@@ -1529,7 +1541,7 @@ SINGLES_DIFFICULTIES = ("bSP", "BSP", "DSP", "ESP", "CSP")
 st.set_page_config(layout="wide")
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=600, refresh_mode="background")
 def load_frames():
     secrets = st.secrets["sheets"]
     loader = GoogleSheetLoader(doc_id=secrets["doc_id"])
@@ -1583,18 +1595,30 @@ evaluated `st.secrets` at import time, and called `sys.exit()` on completion),
 the `data_source_info.pop("source")` mutation of `st.secrets` that broke on the
 second rerun, and the `sys.path.append("src")` working-directory dependency.
 
-- [ ] **Step 2: Add the trials loader**
+- [ ] **Step 2: Raise the Streamlit floor**
 
-Add to `GoogleSheetLoader` in `src/life4/data/loaders.py`:
+`load_trials` already exists — Task 8 added it.
 
-```python
-    def load_trials(self, gid: int) -> pd.DataFrame:
-        response = requests.get(self.csv_url(gid), timeout=self.timeout)
-        response.raise_for_status()
-        return pd.read_csv(io.StringIO(response.text))
+The plan's Global Constraints require Streamlit `>=1.62` for
+`st.cache_data(refresh_mode=...)`. The current pin is `>=1.41.1`:
+
+```bash
+uv add "streamlit>=1.62"
 ```
 
-Add `import io` at the top of the file.
+Verify the API is present before relying on it:
+
+```bash
+uv run python -c "
+import streamlit as st, inspect
+p = inspect.signature(st.cache_data).parameters
+assert 'refresh_mode' in p, 'streamlit too old for refresh_mode'
+print(st.__version__, 'ok')
+"
+```
+
+Confirmed available in 1.62.0: `st.cache_data` accepts `ttl` and
+`refresh_mode` together, `refresh_mode` defaulting to `"foreground"`.
 
 - [ ] **Step 3: Fix the TYPE_CHECKING import and drop the F821 ignore**
 
