@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from life4.data.availability import ChartPool
 from life4.ddr import Lamp
 from life4.life4.core import Life4RankEnum
+
+if TYPE_CHECKING:
+    from life4.ddr import DDRDataset
 
 
 _LEVELS_TAKING_AN = {8, 11, 18}
@@ -44,7 +47,7 @@ class LampRequirement(Requirement, ProgressDisplay):
     multiple_levels = False
     pool = ChartPool.REQUIRED
 
-    def __init__(self, level: int, lamp: "Lamp"):
+    def __init__(self, level: int, lamp: Lamp):
         self.level = level
         self.lamp = lamp
 
@@ -277,7 +280,7 @@ class LampFloorRequirement(Requirement, ProgressDisplay):
     def __init__(
         self,
         level: int,
-        lamp: "Lamp",
+        lamp: Lamp,
         floor: int,
         num_exceptions: int = 0,
         exception_floor: int = None,

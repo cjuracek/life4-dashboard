@@ -1,7 +1,10 @@
 from enum import IntEnum
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from pydantic import BaseModel, Field, field_validator
+
+if TYPE_CHECKING:
+    from life4.life4.ranks.requirements import Requirement
 
 MFC_POINT_MAPPING = {
     1: 0.1,

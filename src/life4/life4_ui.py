@@ -1,4 +1,3 @@
-import uuid
 from typing import List
 
 import streamlit as st
@@ -13,15 +12,15 @@ class Life4RankDisplay:
         self.life4_rank = life4_rank
         self.data = data
 
-    def create_checkbox(self, requirement: Requirement):
+    def create_checkbox(self, requirement: Requirement, group: str):
         st.checkbox(
             requirement.display_str(self.data),
             disabled=True,
             value=requirement.is_satisfied(self.data),
-            key=str(uuid.uuid4()),
+            key=f"{self.life4_rank}|{group}|{requirement}",
         )
 
-    def _visualize_reqs(self, requirements: List[Requirement]):
+    def _visualize_reqs(self, requirements: List[Requirement], group: str):
         requirement_levels = range(14, 20)
         level_to_requirements = {
             level: [
@@ -36,10 +35,14 @@ class Life4RankDisplay:
                 continue
 
             st.write(f"{level}s")
-            _ = [self.create_checkbox(level_req) for level_req in level_reqs]
+            _ = [self.create_checkbox(level_req, group) for level_req in level_reqs]
 
         st.write("Other")
-        _ = [self.create_checkbox(req) for req in requirements if req.multiple_levels]
+        _ = [
+            self.create_checkbox(req, group)
+            for req in requirements
+            if req.multiple_levels
+        ]
 
     def visualize(self):
         """Visualize ranks + substitutions as a series of Streamlit checkboxes in collapsible menu"""
@@ -67,6 +70,6 @@ class Life4RankDisplay:
         expander_title += f"\n\n  • {progress} requirements completed\n\n  • {available_substitutions} substitutions available"
         with st.expander(expander_title, expanded=False):
             st.write("Requirements")
-            self._visualize_reqs(self.life4_rank.requirements)
+            self._visualize_reqs(self.life4_rank.requirements, group="req")
             st.write("Substitutions")
-            self._visualize_reqs(self.life4_rank.substitutions)
+            self._visualize_reqs(self.life4_rank.substitutions, group="sub")
