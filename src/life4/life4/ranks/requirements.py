@@ -354,7 +354,7 @@ class SDPRequirement(Requirement):
         return f"SDP a {self.level}+"
 
     def is_satisfied(self, data: "DDRDataset"):
-        return max(data.get_sdps()["Level"]) >= self.level
+        return max(data.get_sdps()["level"]) >= self.level
 
     def display_str(self, data: "DDRDataset") -> str:
         return str(self)
@@ -374,7 +374,7 @@ class SDPCountRequirement(Requirement, ProgressDisplay):
 
     def _count_sdps(self, data: "DDRDataset") -> int:
         sdps = data.get_sdps()
-        return len(sdps[sdps["Level"] >= self.level])
+        return len(sdps[sdps["level"] >= self.level])
 
     def is_satisfied(self, data: "DDRDataset"):
         return self._count_sdps(data) >= self.num
@@ -402,7 +402,7 @@ class MFCRequirement(Requirement):
         return f"MFC {article} {self.level}+"
 
     def is_satisfied(self, data: "DDRDataset"):
-        return max(data.get_lamp(Lamp.White)["Level"]) >= self.level
+        return max(data.get_lamp(Lamp.White)["level"]) >= self.level
 
     def display_str(self, data: "DDRDataset") -> str:
         return str(self)
@@ -425,7 +425,7 @@ class MFCCountRequirement(Requirement, ProgressDisplay):
 
     def _count_mfcs(self, data: "DDRDataset") -> int:
         mfcs = data.get_lamp(Lamp.White)
-        return len(mfcs[mfcs["Level"] >= self.level])
+        return len(mfcs[mfcs["level"] >= self.level])
 
     def is_satisfied(self, data: "DDRDataset"):
         return self._count_mfcs(data) >= self.num
