@@ -98,6 +98,6 @@ class DDRDataset:
         mfc_points = sum(MFC_POINT_MAPPING[level] for level in mfcs["Level"])
         return sdp_points + mfc_points
 
-    def get_level_scores(self, level: int, return_zero=True):
-        level_scores = self.get_level(level)["Score"]
-        return level_scores
+    def get_level_scores(self, level: int) -> pd.Series:
+        """Scores for charts actually played at this level. Unplayed excluded."""
+        return self.get_level(level)["score"].dropna()

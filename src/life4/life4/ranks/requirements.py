@@ -151,7 +151,7 @@ class ClearRequirement(Requirement, ProgressDisplay):
         return req_str
 
     def _get_valid_scores(self, data) -> int:
-        level_scores = data.get_level_scores(level=self.level, return_zero=False)
+        level_scores = data.get_level_scores(level=self.level)
         if not self.floor:
             return len(level_scores)
 
@@ -159,11 +159,13 @@ class ClearRequirement(Requirement, ProgressDisplay):
         if len(scores_over_floor) >= self.num_required:
             return len(scores_over_floor)
 
-        exception_scores = [
-            score
-            for score in level_scores
-            if self.exception_floor <= score < self.floor
-        ]
+        exception_scores = []
+        if self.exception_floor is not None:
+            exception_scores = [
+                score
+                for score in level_scores
+                if self.exception_floor <= score < self.floor
+            ]
         num_valid_exceptions = min(len(exception_scores), self.num_exceptions)
         total_valid_scores = len(scores_over_floor) + num_valid_exceptions
         return total_valid_scores
