@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from life4.life4.core import MFC_POINT_MAPPING, SDP_POINT_MAPPING
+from life4.life4.core import MAPointsUnknownLevel, MFC_POINT_MAPPING, SDP_POINT_MAPPING
 
 if TYPE_CHECKING:
     from life4.life4.core import Life4Trial
@@ -91,11 +91,19 @@ class DDRDataset:
             (self._data["lamp"] == Lamp.Gold) & (self._data["perfect"] < 10)
         ]
 
-    def get_ma_points(self):
-        sdps = self.get_sdps()
-        sdp_points = sum(SDP_POINT_MAPPING[level] for level in sdps["Level"])
-        mfcs = self._data[self._data["Lamp"] == Lamp.White]
-        mfc_points = sum(MFC_POINT_MAPPING[level] for level in mfcs["Level"])
+    def get_ma_points(self) -> float:
+        sdp_levels = self.get_sdps()["level"]
+        mfc_levels = self.get_lamp(Lamp.White)["level"]
+        for level in (*sdp_levels, *mfc_levels):
+            if level not in MFC_POINT_MAPPING:
+                raise MAPointsUnknownLevel(
+                    f"No MA point value defined for level {level}. "
+                    f"MFC_POINT_MAPPING covers levels "
+                    f"{min(MFC_POINT_MAPPING)}-{max(MFC_POINT_MAPPING)}; "
+                    f"source the value from life4ddr.com and add it."
+                )
+        sdp_points = sum(SDP_POINT_MAPPING[level] for level in sdp_levels)
+        mfc_points = sum(MFC_POINT_MAPPING[level] for level in mfc_levels)
         return sdp_points + mfc_points
 
     def get_level_scores(self, level: int) -> pd.Series:
