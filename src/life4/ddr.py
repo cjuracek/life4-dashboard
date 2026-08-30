@@ -1,8 +1,13 @@
-import logging
 from enum import IntEnum
+from typing import TYPE_CHECKING
 
-from life4.data.interfaces import ScoreTrialFetcher
-from life4.life4.core import MFC_POINT_MAPPING, SDP_POINT_MAPPING, Life4Trial
+import pandas as pd
+
+from life4.data.availability import ChartPool, classify, pool_classes
+from life4.life4.core import MAPointsUnknownLevel, MFC_POINT_MAPPING, SDP_POINT_MAPPING
+
+if TYPE_CHECKING:
+    from life4.life4.core import Life4Trial
 
 
 class Lamp(IntEnum):
@@ -15,115 +20,121 @@ class Lamp(IntEnum):
     White = 6
 
 
+#: How each lamp is written in the UI. LIFE4's own vocabulary, not enum names.
+LAMP_LABELS = {
+    Lamp.NO_LAMP: "Not played",
+    Lamp.Clear: "Clear",
+    Lamp.Red: "LIFE4 Clear",
+    Lamp.Blue: "Full Combo",
+    Lamp.Green: "Great Full Combo",
+    Lamp.Gold: "Perfect Full Combo",
+    Lamp.White: "Marvelous Full Combo",
+}
+
+
 class DDRDataset:
-    def __init__(
-        self,
-        data_source: ScoreTrialFetcher,
-        filter_doubles=True,
-        filter_course_trials=True,
-        filter_other=True,
-        filter_removed=True,
-    ):
-        logging.info(f"Reading data from: {data_source}")
-        self._data = data_source.load_scores()
-        if filter_doubles:
-            singles_diff = ["bSP", "BSP", "DSP", "ESP", "CSP"]  # noqa: F841
-            self._data = self._data.query("Diff in @singles_diff")
+    """Chart history with lamps derived. Takes a prepared canonical frame.
 
-        if filter_course_trials:
-            self._data = self._data.query("Availability != 'course trial'")
+    Loading, filtering, and merging happen upstream in life4.data so this
+    class can be constructed from a handful of rows in a test.
+    """
 
-        if filter_other:
-            self._data = self._data.query("Availability != 'Other'")
-
-        if filter_removed:
-            self._data = self._data.query("Availability != 'removed'")
-
-        # Add lamp information
-        self._data["Lamp"] = self._data.apply(func=self._get_lamp, axis=1)
-        self._validate_data()
-
-        # Add trials information
-        trials_df = data_source.load_trials()
-        self.trials = [
-            Life4Trial(**trial.to_dict()) for _, trial in trials_df.iterrows()
-        ]
-
-    def _validate_data(self):
-        valid_levels = range(14, 20)
-        if not all(level in self._data["Level"].values for level in valid_levels):
-            raise ValueError(
-                "Missing 1 or more levels (14-19) in dataset. Check current data filtering"
-            )
+    def __init__(self, data: pd.DataFrame, trials: "list[Life4Trial] | None" = None):
+        self._data = data.copy()
+        self._data["lamp"] = self._data.apply(self._get_lamp, axis=1)
+        self._data["availability_class"] = self._data["availability"].map(classify)
+        self.trials = list(trials or [])
 
     def _get_lamp(self, row) -> Lamp:
-        if row["Score"] == 1_000_000:
+        if row["score"] == 1_000_000:
             return Lamp.White
-        is_record_missing = row.isna()
-        if is_record_missing["Record On"]:
+        missing = row.isna()
+        if missing["record_on"]:
             return Lamp.NO_LAMP
-        elif not is_record_missing["PFC Date"]:
+        elif not missing["pfc_date"]:
             return Lamp.Gold
-        elif not is_record_missing["GFC Date"]:
+        elif not missing["gfc_date"]:
             return Lamp.Green
-        elif not is_record_missing["FC Date"]:
+        elif not missing["fc_date"]:
             return Lamp.Blue
-        elif not is_record_missing["Life4 Date"]:
+        elif not missing["life4_date"]:
             return Lamp.Red
-        else:
-            return Lamp.Clear
+        return Lamp.Clear
 
-    def get_lamp(self, lamp: Lamp):
-        """Return all songs with a given lamp"""
-        return self._data[self._data["Lamp"] == lamp]
+    def charts(self, pool: ChartPool = ChartPool.EARNED) -> pd.DataFrame:
+        allowed = pool_classes(pool)
+        return self._data[self._data["availability_class"].isin(allowed)]
 
-    def get_level(self, level: int):
-        return self._data.query("Level == @level")
+    def get_level(self, level: int, *, pool: ChartPool = ChartPool.EARNED):
+        charts = self.charts(pool)
+        return charts[charts["level"] == level]
 
-    def get_level_lamp(self, level: int):
-        """Get lamp for a given level"""
-        lamps = self.get_level(level=level)["Lamp"]
-        return min(lamps)
+    def get_lamp(self, lamp: Lamp, *, pool: ChartPool = ChartPool.EARNED):
+        charts = self.charts(pool)
+        return charts[charts["lamp"] == lamp]
 
-    def get_lamps_for_level(self, level: int):
-        return self.get_level(level=level)["Lamp"].to_list()
+    def get_lamps_for_level(
+        self, level: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> list[Lamp]:
+        # The "lamp" column is int64 internally (pandas coerces the IntEnum on
+        # assignment in __init__), so this must convert back to Lamp on the
+        # way out or the annotation is a lie.
+        return [Lamp(lamp) for lamp in self.get_level(level, pool=pool)["lamp"]]
 
-    def get_num_pfcs(self, level: int):
-        diff_df = self.get_level(level)
-        return len(diff_df[diff_df["Lamp"] == Lamp.Gold])
+    def get_level_lamp(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> Lamp:
+        lamps = self.get_lamps_for_level(level, pool=pool)
+        return min(lamps) if lamps else Lamp.NO_LAMP
 
-    def get_num_AAA(self, level: int):
-        diff_df = self.get_level(level)
-        return len(diff_df[diff_df["Score"] >= 990_000])
+    def get_num_pfcs(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> int:
+        return int((self.get_level(level, pool=pool)["lamp"] == Lamp.Gold).sum())
 
-    def get_ceiling(self, level: int):
-        return self.get_level(level)["Score"].max()
+    def get_num_AAA(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> int:
+        return int((self.get_level(level, pool=pool)["score"] >= 990_000).sum())
 
-    def get_songs_below_threshold(self, level: int, threshold: int):
-        level_songs = self.get_level(level)
-        return level_songs[level_songs["Score"] < threshold]
+    def get_ceiling(self, level: int, *, pool: ChartPool = ChartPool.EARNED):
+        return self.get_level(level, pool=pool)["score"].max()
 
-    def get_songs_above_threshold(self, level: int, threshold: int):
-        level_songs = self.get_level(level)
-        return level_songs[level_songs["Score"] >= threshold]
+    def get_songs_below_threshold(
+        self, level: int, threshold: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> pd.DataFrame:
+        level_songs = self.get_level(level, pool=pool)
+        return level_songs[level_songs["score"] < threshold]
 
-    def get_songs_in_range(self, level: int, lower: int, upper: int):
-        level_songs = self.get_level(level)
+    def get_songs_above_threshold(
+        self, level: int, threshold: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> pd.DataFrame:
+        level_songs = self.get_level(level, pool=pool)
+        return level_songs[level_songs["score"] >= threshold]
+
+    def get_songs_in_range(
+        self, level: int, lower: int, upper: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> pd.DataFrame:
+        level_songs = self.get_level(level, pool=pool)
         return level_songs[
-            (level_songs["Score"] >= lower) & (level_songs["Score"] < upper)
+            (level_songs["score"] >= lower) & (level_songs["score"] < upper)
         ]
 
-    def get_sdps(self):
-        sdps = self._data[(self._data["Lamp"] == Lamp.Gold) & (self._data["Perf"] < 10)]
-        return sdps
+    def get_sdps(self, *, pool: ChartPool = ChartPool.EARNED) -> pd.DataFrame:
+        charts = self.charts(pool)
+        return charts[(charts["lamp"] == Lamp.Gold) & (charts["perfect"] < 10)]
 
-    def get_ma_points(self):
-        sdps = self.get_sdps()
-        sdp_points = sum(SDP_POINT_MAPPING[level] for level in sdps["Level"])
-        mfcs = self._data[self._data["Lamp"] == Lamp.White]
-        mfc_points = sum(MFC_POINT_MAPPING[level] for level in mfcs["Level"])
+    def get_ma_points(self, *, pool: ChartPool = ChartPool.EARNED) -> float:
+        sdp_levels = self.get_sdps(pool=pool)["level"]
+        mfc_levels = self.get_lamp(Lamp.White, pool=pool)["level"]
+        for level in (*sdp_levels, *mfc_levels):
+            if level not in MFC_POINT_MAPPING:
+                raise MAPointsUnknownLevel(
+                    f"No MA point value defined for level {level}. "
+                    f"MFC_POINT_MAPPING covers levels "
+                    f"{min(MFC_POINT_MAPPING)}-{max(MFC_POINT_MAPPING)}; "
+                    f"source the value from life4ddr.com and add it."
+                )
+        sdp_points = sum(SDP_POINT_MAPPING[level] for level in sdp_levels)
+        mfc_points = sum(MFC_POINT_MAPPING[level] for level in mfc_levels)
         return sdp_points + mfc_points
 
-    def get_level_scores(self, level: int, return_zero=True):
-        level_scores = self.get_level(level)["Score"]
-        return level_scores
+    def get_level_scores(
+        self, level: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> pd.Series:
+        """Scores for charts actually played at this level. Unplayed excluded."""
+        return self.get_level(level, pool=pool)["score"].dropna()

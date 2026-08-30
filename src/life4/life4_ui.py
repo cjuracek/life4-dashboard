@@ -1,6 +1,6 @@
-import uuid
 from typing import List
 
+import pandas as pd
 import streamlit as st
 
 from life4.ddr import DDRDataset
@@ -8,20 +8,39 @@ from life4.life4.core import Life4Rank
 from life4.life4.ranks.requirements import Requirement
 
 
+@st.dialog("Blocking charts", width="large")
+def _show_blockers(requirement_label: str, blockers: pd.DataFrame) -> None:
+    st.caption(requirement_label)
+    st.dataframe(blockers, hide_index=True, width="stretch")
+
+
 class Life4RankDisplay:
     def __init__(self, life4_rank: Life4Rank, data: DDRDataset):
         self.life4_rank = life4_rank
         self.data = data
 
-    def create_checkbox(self, requirement: Requirement):
+    def create_checkbox(self, requirement: Requirement, group: str):
+        satisfied = requirement.is_satisfied(self.data)
         st.checkbox(
             requirement.display_str(self.data),
             disabled=True,
-            value=requirement.is_satisfied(self.data),
-            key=str(uuid.uuid4()),
+            value=satisfied,
+            key=f"{self.life4_rank}|{group}|{requirement}",
         )
+        if satisfied:
+            return
 
-    def _visualize_reqs(self, requirements: List[Requirement]):
+        blockers = requirement.blockers(self.data)
+        if blockers.empty:
+            return
+
+        unplayed = int(blockers["score"].isna().sum())
+        to_improve = len(blockers) - unplayed
+        label = f"{unplayed} unplayed · {to_improve} to improve"
+        if st.button(label, key=f"{self.life4_rank}|{group}|{requirement}|blockers"):
+            _show_blockers(requirement.display_str(self.data), blockers)
+
+    def _visualize_reqs(self, requirements: List[Requirement], group: str):
         requirement_levels = range(14, 20)
         level_to_requirements = {
             level: [
@@ -36,10 +55,14 @@ class Life4RankDisplay:
                 continue
 
             st.write(f"{level}s")
-            _ = [self.create_checkbox(level_req) for level_req in level_reqs]
+            _ = [self.create_checkbox(level_req, group) for level_req in level_reqs]
 
         st.write("Other")
-        _ = [self.create_checkbox(req) for req in requirements if req.multiple_levels]
+        _ = [
+            self.create_checkbox(req, group)
+            for req in requirements
+            if req.multiple_levels
+        ]
 
     def visualize(self):
         """Visualize ranks + substitutions as a series of Streamlit checkboxes in collapsible menu"""
@@ -67,6 +90,6 @@ class Life4RankDisplay:
         expander_title += f"\n\n  • {progress} requirements completed\n\n  • {available_substitutions} substitutions available"
         with st.expander(expander_title, expanded=False):
             st.write("Requirements")
-            self._visualize_reqs(self.life4_rank.requirements)
+            self._visualize_reqs(self.life4_rank.requirements, group="req")
             st.write("Substitutions")
-            self._visualize_reqs(self.life4_rank.substitutions)
+            self._visualize_reqs(self.life4_rank.substitutions, group="sub")

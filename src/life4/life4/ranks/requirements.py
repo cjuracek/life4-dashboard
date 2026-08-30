@@ -1,8 +1,14 @@
 from abc import ABC, abstractmethod
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from life4.ddr import Lamp
+import pandas as pd
+
+from life4.data.availability import ChartPool
+from life4.ddr import LAMP_LABELS, Lamp
 from life4.life4.core import Life4RankEnum
+
+if TYPE_CHECKING:
+    from life4.ddr import DDRDataset
 
 
 _LEVELS_TAKING_AN = {8, 11, 18}
@@ -20,8 +26,40 @@ def _format_score(score: int) -> str:
     return f"{score:,}"
 
 
+def _song_labels(charts: pd.DataFrame) -> pd.Series:
+    """Song titles, disambiguated by difficulty only where a title repeats.
+
+    Within one level a title is almost always unique, so a difficulty column
+    would be dead weight on ~99% of rows. Where a song does have two charts at
+    the same level, each row carries its own difficulty: "Ace out (CSP)" and
+    "Ace out (ESP)".
+    """
+    repeated = charts.groupby("title")["title"].transform("size") > 1
+    return charts["title"].where(
+        ~repeated, charts["title"] + " (" + charts["diff"] + ")"
+    )
+
+
+def _sorted_by_song(blockers: pd.DataFrame) -> pd.DataFrame:
+    """Blockers in alphabetical order by song title, case-insensitively.
+
+    Deliberately NOT ordered by score. The list is read to find a specific
+    song, so alphabetical is what makes it scannable; a score ordering put
+    unplayed charts first and then re-sorted the rest, which reads as the
+    list changing its mind halfway down. Case-insensitive because a plain
+    sort strands lowercase titles after every capitalised one.
+    """
+    return blockers.sort_values(
+        "song", key=lambda song: song.str.casefold()
+    ).reset_index(drop=True)
+
+
 class Requirement(ABC):
     multiple_levels: bool
+    pool: ChartPool = ChartPool.EARNED
+
+    #: Columns every blockers() frame returns, so the UI can render them uniformly.
+    BLOCKER_COLUMNS = ("song", "score", "needs")
 
     @abstractmethod
     def is_satisfied(self, data: "DDRDataset"):
@@ -31,18 +69,26 @@ class Requirement(ABC):
     def display_str(self, data: "DDRDataset") -> str:
         pass
 
+    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+        """Charts preventing this requirement, worst first.
+
+        Empty for count-based requirements ("PFC 5 16s"), which have no
+        denominator and therefore no specific chart to name.
+        """
+        return pd.DataFrame(columns=list(self.BLOCKER_COLUMNS))
+
 
 class ProgressDisplay(Protocol):
-    def get_progress(self) -> str:
-        ...
+    def get_progress(self) -> str: ...
 
 
 class LampRequirement(Requirement, ProgressDisplay):
     """E.g. 'Red Lamp' (for a given difficulty)"""
 
     multiple_levels = False
+    pool = ChartPool.REQUIRED
 
-    def __init__(self, level: int, lamp: "Lamp"):
+    def __init__(self, level: int, lamp: Lamp):
         self.level = level
         self.lamp = lamp
 
@@ -50,7 +96,7 @@ class LampRequirement(Requirement, ProgressDisplay):
         return f"{self.lamp.name} Lamp"
 
     def get_progress(self, data: "DDRDataset"):
-        lamps = data.get_lamps_for_level(self.level)
+        lamps = data.get_lamps_for_level(self.level, pool=self.pool)
         valid_lamps = [lamp for lamp in lamps if lamp >= self.lamp]
         return f"{len(valid_lamps)}/{len(lamps)}"
 
@@ -61,8 +107,20 @@ class LampRequirement(Requirement, ProgressDisplay):
         return str_to_display
 
     def is_satisfied(self, data: "DDRDataset"):
-        lamp = data.get_level_lamp(level=self.level)
+        lamp = data.get_level_lamp(level=self.level, pool=self.pool)
         return lamp >= self.lamp
+
+    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+        charts = data.get_level(self.level, pool=self.pool).copy()
+        charts["song"] = _song_labels(charts)
+        below = charts[charts["lamp"] < self.lamp]
+        out = below[["song", "score", "lamp"]].copy()
+        out["needs"] = [
+            f"{LAMP_LABELS[Lamp(lamp)]} → {LAMP_LABELS[self.lamp]}"
+            for lamp in out["lamp"]
+        ]
+        out = out[list(self.BLOCKER_COLUMNS)]
+        return _sorted_by_song(out)
 
 
 class PFCRequirement(Requirement, ProgressDisplay):
@@ -74,18 +132,19 @@ class PFCRequirement(Requirement, ProgressDisplay):
         self.level = level
         self.num_pfc = num
 
+    def __str__(self):
+        if self.num_pfc == 1:
+            return f"PFC {_article_for_level(self.level)} {self.level}"
+        return f"PFC {self.num_pfc} {self.level}s"
+
     def is_satisfied(self, data: "DDRDataset"):
-        return data.get_num_pfcs(self.level) >= self.num_pfc
+        return data.get_num_pfcs(self.level, pool=self.pool) >= self.num_pfc
 
     def get_progress(self, data: "DDRDataset"):
-        return f"{data.get_num_pfcs(self.level)}/{self.num_pfc}"
+        return f"{data.get_num_pfcs(self.level, pool=self.pool)}/{self.num_pfc}"
 
     def display_str(self, data: "DDRDataset") -> str:
-        if self.num_pfc == 1:
-            article = _article_for_level(self.level)
-            str_to_display = f"PFC {article} {self.level}"
-        else:
-            str_to_display = f"PFC {self.num_pfc} {self.level}s"
+        str_to_display = str(self)
         if not self.is_satisfied(data):
             str_to_display += f" ({self.get_progress(data)})"
         return str_to_display
@@ -100,18 +159,19 @@ class AAARequirement(Requirement):
         self.level = level
         self.num_AAA = num
 
+    def __str__(self):
+        if self.num_AAA == 1:
+            return f"AAA {_article_for_level(self.level)} {self.level}"
+        return f"AAA {self.num_AAA} {self.level}s"
+
     def is_satisfied(self, data: "DDRDataset"):
-        return data.get_num_AAA(level=self.level) >= self.num_AAA
+        return data.get_num_AAA(level=self.level, pool=self.pool) >= self.num_AAA
 
     def get_progress(self, data: "DDRDataset"):
-        return f"{data.get_num_AAA(level=self.level)}/{self.num_AAA}"
+        return f"{data.get_num_AAA(level=self.level, pool=self.pool)}/{self.num_AAA}"
 
     def display_str(self, data: "DDRDataset") -> str:
-        if self.num_AAA == 1:
-            article = _article_for_level(self.level)
-            str_to_display = f"AAA {article} {self.level}"
-        else:
-            str_to_display = f"AAA {self.num_AAA} {self.level}s"
+        str_to_display = str(self)
         if not self.is_satisfied(data):
             str_to_display += f" ({self.get_progress(data)})"
         return str_to_display
@@ -152,7 +212,7 @@ class ClearRequirement(Requirement, ProgressDisplay):
         return req_str
 
     def _get_valid_scores(self, data) -> int:
-        level_scores = data.get_level_scores(level=self.level, return_zero=False)
+        level_scores = data.get_level_scores(level=self.level, pool=self.pool)
         if not self.floor:
             return len(level_scores)
 
@@ -160,11 +220,13 @@ class ClearRequirement(Requirement, ProgressDisplay):
         if len(scores_over_floor) >= self.num_required:
             return len(scores_over_floor)
 
-        exception_scores = [
-            score
-            for score in level_scores
-            if self.exception_floor <= score < self.floor
-        ]
+        exception_scores = []
+        if self.exception_floor is not None:
+            exception_scores = [
+                score
+                for score in level_scores
+                if self.exception_floor <= score < self.floor
+            ]
         num_valid_exceptions = min(len(exception_scores), self.num_exceptions)
         total_valid_scores = len(scores_over_floor) + num_valid_exceptions
         return total_valid_scores
@@ -196,7 +258,7 @@ class CeilingRequirement(Requirement):
         return f"{_format_score(self.ceiling)}+ {article} {self.level}"
 
     def is_satisfied(self, data: "DDRDataset"):
-        return data.get_ceiling(level=self.level) >= self.ceiling
+        return data.get_ceiling(level=self.level, pool=self.pool) >= self.ceiling
 
     def display_str(self, data: "DDRDataset") -> str:
         return str(self)
@@ -206,6 +268,7 @@ class FloorRequirement(Requirement, ProgressDisplay):
     """E.g. 'All 16s over 920k'"""
 
     multiple_levels = False
+    pool = ChartPool.REQUIRED
 
     def __init__(
         self,
@@ -228,25 +291,43 @@ class FloorRequirement(Requirement, ProgressDisplay):
         return req_str
 
     def is_satisfied(self, data: "DDRDataset"):
-        if data.get_level_lamp(self.level) == Lamp.NO_LAMP:
+        charts = data.get_level(self.level, pool=self.pool)
+        if charts["score"].isna().any():
             return False
 
         if self.exception_floor:
             if not data.get_songs_below_threshold(
-                level=self.level, threshold=self.exception_floor
+                level=self.level, threshold=self.exception_floor, pool=self.pool
             ).empty:
                 return False
 
         songs_below_threshold = data.get_songs_below_threshold(
-            level=self.level, threshold=self.floor
+            level=self.level, threshold=self.floor, pool=self.pool
         )
         return len(songs_below_threshold) <= self.num_exceptions
 
+    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+        charts = data.get_level(self.level, pool=self.pool).copy()
+        charts["song"] = _song_labels(charts)
+        below = charts[charts["score"].isna() | (charts["score"] < self.floor)]
+        out = below[["song", "score"]].copy()
+        out["needs"] = [
+            "unplayed" if pd.isna(score) else f"+{self.floor - score:,.0f}"
+            for score in out["score"]
+        ]
+        out = out[list(self.BLOCKER_COLUMNS)]
+        return _sorted_by_song(out)
+
     def get_progress(self, data: "DDRDataset"):
-        total_songs = len(data.get_level(self.level))
-        songs_above_floor = len(data.get_songs_above_threshold(self.level, self.floor))
+        total_songs = len(data.get_level(self.level, pool=self.pool))
+        songs_above_floor = len(
+            data.get_songs_above_threshold(self.level, self.floor, pool=self.pool)
+        )
         song_exceptions = data.get_songs_in_range(
-            level=self.level, lower=self.exception_floor, upper=self.floor
+            level=self.level,
+            lower=self.exception_floor,
+            upper=self.floor,
+            pool=self.pool,
         )
         valid_exceptions = min(len(song_exceptions), self.num_exceptions)
         return f"{songs_above_floor + valid_exceptions}/{total_songs}"
@@ -262,11 +343,12 @@ class LampFloorRequirement(Requirement, ProgressDisplay):
     """Combined lamp and floor requirement for a single level."""
 
     multiple_levels = False
+    pool = ChartPool.REQUIRED
 
     def __init__(
         self,
         level: int,
-        lamp: "Lamp",
+        lamp: Lamp,
         floor: int,
         num_exceptions: int = 0,
         exception_floor: int = None,
@@ -282,15 +364,7 @@ class LampFloorRequirement(Requirement, ProgressDisplay):
         )
 
     def __str__(self):
-        lamp_label_map = {
-            Lamp.Clear: "Clear",
-            Lamp.Red: "LIFE4 Clear",
-            Lamp.Blue: "Full Combo",
-            Lamp.Green: "Great Full Combo",
-            Lamp.Gold: "Perfect Full Combo",
-            Lamp.White: "Marvelous Full Combo",
-        }
-        lamp_label = lamp_label_map.get(self.lamp, f"{self.lamp.name.title()} Lamp")
+        lamp_label = LAMP_LABELS.get(self.lamp, f"{self.lamp.name.title()} Lamp")
         floor_str = str(self.floor_requirement)
         if floor_str:
             floor_str = floor_str[0].lower() + floor_str[1:]
@@ -300,6 +374,17 @@ class LampFloorRequirement(Requirement, ProgressDisplay):
         lamp_ok = self.lamp_requirement.is_satisfied(data)
         floor_ok = self.floor_requirement.is_satisfied(data)
         return lamp_ok and floor_ok
+
+    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+        combined = pd.concat(
+            [
+                self.lamp_requirement.blockers(data),
+                self.floor_requirement.blockers(data),
+            ],
+            ignore_index=True,
+        )
+        deduped = combined.drop_duplicates(subset=["song"], keep="first")
+        return _sorted_by_song(deduped)
 
     def get_progress(self, data: "DDRDataset") -> str:
         progress_parts = []
@@ -330,10 +415,10 @@ class MAPointsRequirement(Requirement, ProgressDisplay):
         return f"MA Points: {self.points_required}"
 
     def is_satisfied(self, data: "DDRDataset"):
-        return data.get_ma_points() >= self.points_required
+        return data.get_ma_points(pool=self.pool) >= self.points_required
 
     def get_progress(self, data: "DDRDataset"):
-        return f"{data.get_ma_points():.2f}/{self.points_required}"
+        return f"{data.get_ma_points(pool=self.pool):.2f}/{self.points_required}"
 
     def display_str(self, data: "DDRDataset") -> str:
         str_to_display = str(self)
@@ -354,7 +439,10 @@ class SDPRequirement(Requirement):
         return f"SDP a {self.level}+"
 
     def is_satisfied(self, data: "DDRDataset"):
-        return max(data.get_sdps()["Level"]) >= self.level
+        sdp_levels = data.get_sdps(pool=self.pool)["level"]
+        if sdp_levels.empty:
+            return False
+        return max(sdp_levels) >= self.level
 
     def display_str(self, data: "DDRDataset") -> str:
         return str(self)
@@ -373,8 +461,8 @@ class SDPCountRequirement(Requirement, ProgressDisplay):
         return f"SDP {self.num} {self.level}s+"
 
     def _count_sdps(self, data: "DDRDataset") -> int:
-        sdps = data.get_sdps()
-        return len(sdps[sdps["Level"] >= self.level])
+        sdps = data.get_sdps(pool=self.pool)
+        return len(sdps[sdps["level"] >= self.level])
 
     def is_satisfied(self, data: "DDRDataset"):
         return self._count_sdps(data) >= self.num
@@ -402,7 +490,10 @@ class MFCRequirement(Requirement):
         return f"MFC {article} {self.level}+"
 
     def is_satisfied(self, data: "DDRDataset"):
-        return max(data.get_lamp(Lamp.White)["Level"]) >= self.level
+        mfc_levels = data.get_lamp(Lamp.White, pool=self.pool)["level"]
+        if mfc_levels.empty:
+            return False
+        return max(mfc_levels) >= self.level
 
     def display_str(self, data: "DDRDataset") -> str:
         return str(self)
@@ -424,8 +515,8 @@ class MFCCountRequirement(Requirement, ProgressDisplay):
         return f"MFC {self.num} {self.level}s+"
 
     def _count_mfcs(self, data: "DDRDataset") -> int:
-        mfcs = data.get_lamp(Lamp.White)
-        return len(mfcs[mfcs["Level"] >= self.level])
+        mfcs = data.get_lamp(Lamp.White, pool=self.pool)
+        return len(mfcs[mfcs["level"] >= self.level])
 
     def is_satisfied(self, data: "DDRDataset"):
         return self._count_mfcs(data) >= self.num
