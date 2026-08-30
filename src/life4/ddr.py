@@ -1,4 +1,3 @@
-import logging
 from enum import IntEnum
 from typing import TYPE_CHECKING
 
@@ -9,8 +8,6 @@ from life4.life4.core import MAPointsUnknownLevel, MFC_POINT_MAPPING, SDP_POINT_
 
 if TYPE_CHECKING:
     from life4.life4.core import Life4Trial
-
-logger = logging.getLogger(__name__)
 
 
 class Lamp(IntEnum):
@@ -67,7 +64,10 @@ class DDRDataset:
     def get_lamps_for_level(
         self, level: int, *, pool: ChartPool = ChartPool.EARNED
     ) -> list[Lamp]:
-        return self.get_level(level, pool=pool)["lamp"].to_list()
+        # The "lamp" column is int64 internally (pandas coerces the IntEnum on
+        # assignment in __init__), so this must convert back to Lamp on the
+        # way out or the annotation is a lie.
+        return [Lamp(lamp) for lamp in self.get_level(level, pool=pool)["lamp"]]
 
     def get_level_lamp(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> Lamp:
         lamps = self.get_lamps_for_level(level, pool=pool)
@@ -106,9 +106,9 @@ class DDRDataset:
         charts = self.charts(pool)
         return charts[(charts["lamp"] == Lamp.Gold) & (charts["perfect"] < 10)]
 
-    def get_ma_points(self) -> float:
-        sdp_levels = self.get_sdps()["level"]
-        mfc_levels = self.get_lamp(Lamp.White)["level"]
+    def get_ma_points(self, *, pool: ChartPool = ChartPool.EARNED) -> float:
+        sdp_levels = self.get_sdps(pool=pool)["level"]
+        mfc_levels = self.get_lamp(Lamp.White, pool=pool)["level"]
         for level in (*sdp_levels, *mfc_levels):
             if level not in MFC_POINT_MAPPING:
                 raise MAPointsUnknownLevel(

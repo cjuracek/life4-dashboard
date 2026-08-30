@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 from conftest import chart, frame
 
 from life4.data.merge import merge_scores
@@ -113,3 +114,27 @@ def test_unplayed_on_both_stays_unplayed():
         frame(chart(title="a", level=16)), frame(chart(title="a", level=16))
     ).charts
     assert pd.isna(merged.loc[0, "score"])
+
+
+def test_duplicate_key_in_primary_raises():
+    # A duplicate (title, diff) in the primary frame must fail loudly rather
+    # than fanning out into extra merged rows.
+    primary = frame(
+        chart(title="a", diff="DSP", level=16),
+        chart(title="a", diff="DSP", level=16),
+    )
+    secondary = frame(chart(title="a", diff="DSP", level=16, score=900_000))
+    with pytest.raises(ValueError, match="primary"):
+        merge_scores(primary, secondary)
+
+
+def test_duplicate_key_in_secondary_raises():
+    # A duplicate (title, diff) in the secondary frame must also fail loudly
+    # -- previously it fanned out silently into two merged rows for one chart.
+    primary = frame(chart(title="a", diff="DSP", level=16))
+    secondary = frame(
+        chart(title="a", diff="DSP", level=16, score=900_000),
+        chart(title="a", diff="DSP", level=16, score=910_000),
+    )
+    with pytest.raises(ValueError, match="secondary"):
+        merge_scores(primary, secondary)
