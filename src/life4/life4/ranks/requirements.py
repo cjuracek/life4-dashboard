@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Protocol
 import pandas as pd
 
 from life4.data.availability import ChartPool
-from life4.ddr import Lamp
+from life4.ddr import LAMP_LABELS, Lamp
 from life4.life4.core import Life4RankEnum
 
 if TYPE_CHECKING:
@@ -26,12 +26,26 @@ def _format_score(score: int) -> str:
     return f"{score:,}"
 
 
+def _song_labels(charts: pd.DataFrame) -> pd.Series:
+    """Song titles, disambiguated by difficulty only where a title repeats.
+
+    Within one level a title is almost always unique, so a difficulty column
+    would be dead weight on ~99% of rows. Where a song does have two charts at
+    the same level, each row carries its own difficulty: "Ace out (CSP)" and
+    "Ace out (ESP)".
+    """
+    repeated = charts.groupby("title")["title"].transform("size") > 1
+    return charts["title"].where(
+        ~repeated, charts["title"] + " (" + charts["diff"] + ")"
+    )
+
+
 class Requirement(ABC):
     multiple_levels: bool
     pool: ChartPool = ChartPool.EARNED
 
     #: Columns every blockers() frame returns, so the UI can render them uniformly.
-    BLOCKER_COLUMNS = ("title", "diff", "score", "needs")
+    BLOCKER_COLUMNS = ("song", "score", "needs")
 
     @abstractmethod
     def is_satisfied(self, data: "DDRDataset"):
@@ -83,13 +97,15 @@ class LampRequirement(Requirement, ProgressDisplay):
         return lamp >= self.lamp
 
     def blockers(self, data: "DDRDataset") -> pd.DataFrame:
-        charts = data.get_level(self.level, pool=self.pool)
+        charts = data.get_level(self.level, pool=self.pool).copy()
+        charts["song"] = _song_labels(charts)
         below = charts[charts["lamp"] < self.lamp]
-        out = below[["title", "diff", "score", "lamp"]].copy()
+        out = below[["song", "score", "lamp"]].copy()
         out["needs"] = [
-            f"{Lamp(lamp).name} -> {self.lamp.name}" for lamp in out["lamp"]
+            f"{LAMP_LABELS[Lamp(lamp)]} → {LAMP_LABELS[self.lamp]}"
+            for lamp in out["lamp"]
         ]
-        out = out.drop(columns="lamp")
+        out = out[list(self.BLOCKER_COLUMNS)]
         return out.sort_values("score", na_position="first").reset_index(drop=True)
 
 
@@ -277,13 +293,15 @@ class FloorRequirement(Requirement, ProgressDisplay):
         return len(songs_below_threshold) <= self.num_exceptions
 
     def blockers(self, data: "DDRDataset") -> pd.DataFrame:
-        charts = data.get_level(self.level, pool=self.pool)
+        charts = data.get_level(self.level, pool=self.pool).copy()
+        charts["song"] = _song_labels(charts)
         below = charts[charts["score"].isna() | (charts["score"] < self.floor)]
-        out = below[["title", "diff", "score"]].copy()
+        out = below[["song", "score"]].copy()
         out["needs"] = [
             "unplayed" if pd.isna(score) else f"+{self.floor - score:,.0f}"
             for score in out["score"]
         ]
+        out = out[list(self.BLOCKER_COLUMNS)]
         return out.sort_values("score", na_position="first").reset_index(drop=True)
 
     def get_progress(self, data: "DDRDataset"):
@@ -332,15 +350,7 @@ class LampFloorRequirement(Requirement, ProgressDisplay):
         )
 
     def __str__(self):
-        lamp_label_map = {
-            Lamp.Clear: "Clear",
-            Lamp.Red: "LIFE4 Clear",
-            Lamp.Blue: "Full Combo",
-            Lamp.Green: "Great Full Combo",
-            Lamp.Gold: "Perfect Full Combo",
-            Lamp.White: "Marvelous Full Combo",
-        }
-        lamp_label = lamp_label_map.get(self.lamp, f"{self.lamp.name.title()} Lamp")
+        lamp_label = LAMP_LABELS.get(self.lamp, f"{self.lamp.name.title()} Lamp")
         floor_str = str(self.floor_requirement)
         if floor_str:
             floor_str = floor_str[0].lower() + floor_str[1:]
@@ -359,7 +369,7 @@ class LampFloorRequirement(Requirement, ProgressDisplay):
             ],
             ignore_index=True,
         )
-        deduped = combined.drop_duplicates(subset=["title", "diff"], keep="first")
+        deduped = combined.drop_duplicates(subset=["song"], keep="first")
         return deduped.sort_values("score", na_position="first").reset_index(drop=True)
 
     def get_progress(self, data: "DDRDataset") -> str:

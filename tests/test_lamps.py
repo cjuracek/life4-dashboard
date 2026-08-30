@@ -1,6 +1,6 @@
 from conftest import chart, dataset
 
-from life4.ddr import Lamp
+from life4.ddr import LAMP_LABELS, Lamp
 
 
 def test_unplayed_chart_has_no_lamp():
@@ -65,3 +65,18 @@ def test_get_level_lamp_returns_a_real_lamp_instance_not_a_bare_int():
     assert isinstance(lamp, Lamp)
     assert lamp.name == "Gold"
     assert d.get_lamps_for_level(16)[0].name == "Gold"
+
+
+def test_lamp_labels_covers_every_lamp_member():
+    # Iterate the enum itself -- a new lamp added to Lamp must not silently
+    # fall out of the UI-facing map.
+    for lamp in Lamp:
+        assert lamp in LAMP_LABELS
+
+    assert LAMP_LABELS[Lamp.NO_LAMP] == "Not played"
+    assert LAMP_LABELS[Lamp.Clear] == "Clear"
+    assert LAMP_LABELS[Lamp.Red] == "LIFE4 Clear"
+    assert LAMP_LABELS[Lamp.Blue] == "Full Combo"
+    assert LAMP_LABELS[Lamp.Green] == "Great Full Combo"
+    assert LAMP_LABELS[Lamp.Gold] == "Perfect Full Combo"
+    assert LAMP_LABELS[Lamp.White] == "Marvelous Full Combo"

@@ -20,6 +20,18 @@ class Lamp(IntEnum):
     White = 6
 
 
+#: How each lamp is written in the UI. LIFE4's own vocabulary, not enum names.
+LAMP_LABELS = {
+    Lamp.NO_LAMP: "Not played",
+    Lamp.Clear: "Clear",
+    Lamp.Red: "LIFE4 Clear",
+    Lamp.Blue: "Full Combo",
+    Lamp.Green: "Great Full Combo",
+    Lamp.Gold: "Perfect Full Combo",
+    Lamp.White: "Marvelous Full Combo",
+}
+
+
 class DDRDataset:
     """Chart history with lamps derived. Takes a prepared canonical frame.
 

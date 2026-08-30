@@ -1,10 +1,17 @@
 from typing import List
 
+import pandas as pd
 import streamlit as st
 
 from life4.ddr import DDRDataset
 from life4.life4.core import Life4Rank
 from life4.life4.ranks.requirements import Requirement
+
+
+@st.dialog("Blocking charts", width="large")
+def _show_blockers(requirement_label: str, blockers: pd.DataFrame) -> None:
+    st.caption(requirement_label)
+    st.dataframe(blockers, hide_index=True, width="stretch")
 
 
 class Life4RankDisplay:
@@ -30,8 +37,8 @@ class Life4RankDisplay:
         unplayed = int(blockers["score"].isna().sum())
         to_improve = len(blockers) - unplayed
         label = f"{unplayed} unplayed · {to_improve} to improve"
-        with st.popover(label, width="stretch"):
-            st.dataframe(blockers, height=240, hide_index=True, width="stretch")
+        if st.button(label, key=f"{self.life4_rank}|{group}|{requirement}|blockers"):
+            _show_blockers(requirement.display_str(self.data), blockers)
 
     def _visualize_reqs(self, requirements: List[Requirement], group: str):
         requirement_levels = range(14, 20)
