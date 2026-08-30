@@ -40,6 +40,20 @@ def _song_labels(charts: pd.DataFrame) -> pd.Series:
     )
 
 
+def _sorted_by_song(blockers: pd.DataFrame) -> pd.DataFrame:
+    """Blockers in alphabetical order by song title, case-insensitively.
+
+    Deliberately NOT ordered by score. The list is read to find a specific
+    song, so alphabetical is what makes it scannable; a score ordering put
+    unplayed charts first and then re-sorted the rest, which reads as the
+    list changing its mind halfway down. Case-insensitive because a plain
+    sort strands lowercase titles after every capitalised one.
+    """
+    return blockers.sort_values(
+        "song", key=lambda song: song.str.casefold()
+    ).reset_index(drop=True)
+
+
 class Requirement(ABC):
     multiple_levels: bool
     pool: ChartPool = ChartPool.EARNED
@@ -106,7 +120,7 @@ class LampRequirement(Requirement, ProgressDisplay):
             for lamp in out["lamp"]
         ]
         out = out[list(self.BLOCKER_COLUMNS)]
-        return out.sort_values("score", na_position="first").reset_index(drop=True)
+        return _sorted_by_song(out)
 
 
 class PFCRequirement(Requirement, ProgressDisplay):
@@ -302,7 +316,7 @@ class FloorRequirement(Requirement, ProgressDisplay):
             for score in out["score"]
         ]
         out = out[list(self.BLOCKER_COLUMNS)]
-        return out.sort_values("score", na_position="first").reset_index(drop=True)
+        return _sorted_by_song(out)
 
     def get_progress(self, data: "DDRDataset"):
         total_songs = len(data.get_level(self.level, pool=self.pool))
@@ -370,7 +384,7 @@ class LampFloorRequirement(Requirement, ProgressDisplay):
             ignore_index=True,
         )
         deduped = combined.drop_duplicates(subset=["song"], keep="first")
-        return deduped.sort_values("score", na_position="first").reset_index(drop=True)
+        return _sorted_by_song(deduped)
 
     def get_progress(self, data: "DDRDataset") -> str:
         progress_parts = []

@@ -15,15 +15,44 @@ def played(title, level, score, **extra):
     return chart(title=title, level=level, score=score, record_on="1/1/2026", **extra)
 
 
-def test_floor_blockers_list_unplayed_first_then_low_scores():
+def test_floor_blockers_are_alphabetical_regardless_of_score():
+    # The list is read to find a specific song, so it sorts by title. An
+    # unplayed chart does NOT float to the top -- a score-based order reads
+    # as the list changing its mind partway down.
     data = dataset(
-        played("a", 16, 999_000),
-        played("b", 16, 940_000),
-        chart(title="c", level=16),
+        played("apple", 16, 999_000),
+        played("cherry", 16, 940_000),
+        chart(title="banana", level=16),
+        played("damson", 16, 900_000),
     )
     blockers = FloorRequirement(level=16, floor=950_000).blockers(data)
-    assert list(blockers["song"]) == ["c", "b"]
-    assert list(blockers["needs"]) == ["unplayed", "+10,000"]
+    assert list(blockers["song"]) == ["banana", "cherry", "damson"]
+    assert list(blockers["needs"]) == ["unplayed", "+10,000", "+50,000"]
+
+
+def test_floor_blockers_sort_case_insensitively():
+    # A plain sort strands lowercase titles after every capitalised one,
+    # putting "fluctus" below "THE SAFARI".
+    data = dataset(
+        chart(title="THE SAFARI", level=16),
+        chart(title="fluctus", level=16),
+        chart(title="Arcadia", level=16),
+    )
+    blockers = FloorRequirement(level=16, floor=950_000).blockers(data)
+    assert list(blockers["song"]) == ["Arcadia", "fluctus", "THE SAFARI"]
+
+
+def test_lamp_floor_blockers_are_alphabetical_after_the_merge():
+    # LampFloorRequirement concatenates two delegates; the combined frame
+    # must be re-sorted, not left in concat order.
+    data = dataset(
+        played("zebra", 16, 900_000),
+        chart(title="aardvark", level=16),
+    )
+    blockers = LampFloorRequirement(level=16, lamp=Lamp.Blue, floor=950_000).blockers(
+        data
+    )
+    assert list(blockers["song"]) == ["aardvark", "zebra"]
 
 
 def test_floor_blockers_are_empty_when_every_chart_clears_the_floor():
