@@ -88,39 +88,6 @@ class DDRDataset:
         # way out or the annotation is a lie.
         return [Lamp(lamp) for lamp in self.get_level(level, pool=pool)["lamp"]]
 
-    def get_level_lamp(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> Lamp:
-        lamps = self.get_lamps_for_level(level, pool=pool)
-        return min(lamps) if lamps else Lamp.NO_LAMP
-
-    def get_num_pfcs(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> int:
-        return int((self.get_level(level, pool=pool)["lamp"] == Lamp.Gold).sum())
-
-    def get_num_AAA(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> int:
-        return int((self.get_level(level, pool=pool)["score"] >= 990_000).sum())
-
-    def get_ceiling(self, level: int, *, pool: ChartPool = ChartPool.EARNED):
-        return self.get_level(level, pool=pool)["score"].max()
-
-    def get_songs_below_threshold(
-        self, level: int, threshold: int, *, pool: ChartPool = ChartPool.EARNED
-    ) -> pd.DataFrame:
-        level_songs = self.get_level(level, pool=pool)
-        return level_songs[level_songs["score"] < threshold]
-
-    def get_songs_above_threshold(
-        self, level: int, threshold: int, *, pool: ChartPool = ChartPool.EARNED
-    ) -> pd.DataFrame:
-        level_songs = self.get_level(level, pool=pool)
-        return level_songs[level_songs["score"] >= threshold]
-
-    def get_songs_in_range(
-        self, level: int, lower: int, upper: int, *, pool: ChartPool = ChartPool.EARNED
-    ) -> pd.DataFrame:
-        level_songs = self.get_level(level, pool=pool)
-        return level_songs[
-            (level_songs["score"] >= lower) & (level_songs["score"] < upper)
-        ]
-
     def get_sdps(self, *, pool: ChartPool = ChartPool.EARNED) -> pd.DataFrame:
         charts = self.charts(pool)
         return charts[(charts["lamp"] == Lamp.Gold) & (charts["perfect"] < 10)]
@@ -159,9 +126,3 @@ class DDRDataset:
         sdp_points = sum(SDP_POINT_MAPPING[level] for level in sdp_levels)
         mfc_points = sum(MFC_POINT_MAPPING[level] for level in mfc_levels)
         return sdp_points + mfc_points
-
-    def get_level_scores(
-        self, level: int, *, pool: ChartPool = ChartPool.EARNED
-    ) -> pd.Series:
-        """Scores for charts actually played at this level. Unplayed excluded."""
-        return self.get_level(level, pool=pool)["score"].dropna()
