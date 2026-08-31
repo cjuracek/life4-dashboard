@@ -1,0 +1,603 @@
+## Pearl 1
+  req: Clear all 14s over 955k (24E, 910k)
+  req: PFC 8 14s
+  req: AAA 60 14s
+  req: Clear all 15s over 910k (29E, 860k)
+  req: PFC a 15
+  req: AAA 26 15s
+  req: Clear 110 16s over 860k (22E, 810k)
+  req: AAA 2 16s
+  req: Clear 26 17s over 810k (6E, 760k)
+  req: 960k+ a 17
+  req: Clear an 18
+  req: 700k+ an 18
+  req: SDP a 6+
+  req: Earn Cobalt or above on 1 Trial
+  sub: LIFE4 Clear all 14s over 980k (19E, 955k)
+  sub: PFC 26 14s
+  sub: AAA 120 14s
+  sub: Clear all 15s over 955k (24E, 910k)
+  sub: PFC 8 15s
+  sub: AAA 60 15s
+  sub: Clear all 16s over 910k (29E, 860k)
+  sub: PFC a 16
+  sub: AAA 26 16s
+  sub: AAA 2 17s
+  sub: 910k+ an 18
+  sub: MFC a 1+
+  sub: SDP an 11+
+## Pearl 2
+  req: Clear all 14s over 960k (23E, 920k)
+  req: PFC 11 14s
+  req: AAA 70 14s
+  req: Clear all 15s over 920k (28E, 870k)
+  req: PFC 2 15s
+  req: AAA 32 15s
+  req: Clear 120 16s over 870k (24E, 820k)
+  req: AAA 5 16s
+  req: Clear 32 17s over 820k (7E, 770k)
+  req: 970k+ a 17
+  req: Clear 2 18s
+  req: 750k+ an 18
+  req: SDP a 7+
+  req: Earn Cobalt or above on 1 Trial
+  sub: LIFE4 Clear all 14s over 982k (18E, 960k)
+  sub: PFC 32 14s
+  sub: AAA 140 14s
+  sub: Clear all 15s over 960k (23E, 920k)
+  sub: PFC 11 15s
+  sub: AAA 70 15s
+  sub: Clear all 16s over 920k (28E, 870k)
+  sub: PFC 2 16s
+  sub: AAA 32 16s
+  sub: AAA 4 17s
+  sub: 920k+ an 18
+  sub: MFC a 2+
+  sub: SDP 3 11+s
+## Pearl 3
+  req: Clear all 14s over 965k (22E, 930k)
+  req: PFC 14 14s
+  req: AAA 80 14s
+  req: Clear all 15s over 930k (27E, 880k)
+  req: PFC 3 15s
+  req: AAA 38 15s
+  req: Clear 130 16s over 880k (26E, 830k)
+  req: AAA 10 16s
+  req: Clear 38 17s over 830k (8E, 780k)
+  req: 980k+ a 17
+  req: Clear 3 18s
+  req: 800k+ an 18
+  req: SDP an 8+
+  req: Earn Cobalt or above on 2 Trials
+  sub: LIFE4 Clear all 14s over 985k (17E, 965k)
+  sub: PFC 38 14s
+  sub: AAA 160 14s
+  sub: Clear all 15s over 965k (22E, 930k)
+  sub: PFC 14 15s
+  sub: AAA 80 15s
+  sub: Clear all 16s over 930k (27E, 880k)
+  sub: PFC 3 16s
+  sub: AAA 38 16s
+  sub: AAA 6 17s
+  sub: 930k+ an 18
+  sub: MFC a 3+
+  sub: SDP a 12+
+## Pearl 4
+  req: Clear all 14s over 970k (21E, 940k)
+  req: PFC 17 14s
+  req: AAA 90 14s
+  req: Clear all 15s over 940k (26E, 890k)
+  req: PFC 4 15s
+  req: AAA 44 15s
+  req: Clear 140 16s over 890k (28E, 840k)
+  req: AAA 15 16s
+  req: Clear 44 17s over 840k (9E, 790k)
+  req: 985k+ a 17
+  req: Clear 4 18s
+  req: 850k+ an 18
+  req: SDP a 9+
+  req: Earn Cobalt or above on 2 Trials
+  sub: LIFE4 Clear all 14s over 987k (16E, 970k)
+  sub: PFC 44 14s
+  sub: AAA 180 14s
+  sub: Clear all 15s over 970k (21E, 940k)
+  sub: PFC 17 15s
+  sub: AAA 90 15s
+  sub: Clear all 16s over 940k (26E, 890k)
+  sub: PFC 4 16s
+  sub: AAA 44 16s
+  sub: AAA 8 17s
+  sub: 940k+ an 18
+  sub: MFC a 4+
+  sub: SDP 2 12+s
+## Pearl 5
+  req: Clear all 14s over 975k (20E, 950k)
+  req: PFC 20 14s
+  req: AAA 100 14s
+  req: Clear all 15s over 950k (25E, 900k)
+  req: PFC 5 15s
+  req: AAA 50 15s
+  req: Clear 150 16s over 900k (30E, 850k)
+  req: AAA 20 16s
+  req: Clear 50 17s over 850k (10E, 800k)
+  req: AAA a 17
+  req: 750k+ 5 18s
+  req: 900k+ an 18
+  req: SDP a 10+
+  req: Earn Pearl or above on 1 Trial
+  sub: LIFE4 Clear all 14s over 990k (15E, 975k)
+  sub: PFC 50 14s
+  sub: Clear all 15s over 975k (20E, 950k)
+  sub: PFC 20 15s
+  sub: AAA 100 15s
+  sub: Clear all 16s over 950k (25E, 900k)
+  sub: PFC 5 16s
+  sub: AAA 50 16s
+  sub: AAA 10 17s
+  sub: 950k+ an 18
+  sub: MFC a 5+
+  sub: SDP 5 12+s
+## Topaz 1
+  req: LIFE4 Clear all 14s over 980k (19E, 955k)
+  req: PFC 26 14s
+  req: AAA 120 14s
+  req: Clear all 15s over 955k (24E, 910k)
+  req: PFC 8 15s
+  req: AAA 60 15s
+  req: Clear all 16s over 910k (29E, 860k)
+  req: PFC a 16
+  req: AAA 26 16s
+  req: Clear 60 17s over 860k (12E, 810k)
+  req: AAA 2 17s
+  req: Clear 8 18s over 760k (1E)
+  req: 910k+ an 18
+  req: MFC a 1+
+  req: SDP an 11+
+  req: MA Points: 1
+  req: Earn Pearl or above on 1 Trial
+  sub: Full Combo all 14s over 991k (14E, 980k)
+  sub: PFC 60 14s
+  sub: LIFE4 Clear all 15s over 980k (19E, 955k)
+  sub: PFC 26 15s
+  sub: AAA 120 15s
+  sub: Clear all 16s over 955k (24E, 910k)
+  sub: PFC 8 16s
+  sub: AAA 60 16s
+  sub: Clear all 17s over 910k (19E, 860k)
+  sub: AAA 12 17s
+  sub: 960k+ an 18
+  sub: MFC a 6+
+  sub: SDP a 13+
+## Topaz 2
+  req: LIFE4 Clear all 14s over 982k (18E, 960k)
+  req: PFC 32 14s
+  req: AAA 140 14s
+  req: Clear all 15s over 960k (23E, 920k)
+  req: PFC 11 15s
+  req: AAA 70 15s
+  req: Clear all 16s over 920k (28E, 870k)
+  req: PFC 2 16s
+  req: AAA 32 16s
+  req: Clear 70 17s over 870k (14E, 820k)
+  req: AAA 4 17s
+  req: Clear 11 18s over 770k (2E)
+  req: 920k+ an 18
+  req: MFC a 2+
+  req: SDP 3 11+s
+  req: MA Points: 2
+  req: Earn Pearl or above on 1 Trial
+  sub: Full Combo all 14s over 992k (13E, 982k)
+  sub: PFC 70 14s
+  sub: LIFE4 Clear all 15s over 982k (18E, 960k)
+  sub: PFC 32 15s
+  sub: AAA 140 15s
+  sub: Clear all 16s over 960k (23E, 920k)
+  sub: PFC 11 16s
+  sub: AAA 70 16s
+  sub: Clear all 17s over 920k (18E, 870k)
+  sub: AAA 14 17s
+  sub: 970k+ an 18
+  sub: MFC a 7+
+  sub: SDP 2 13+s
+## Topaz 3
+  req: LIFE4 Clear all 14s over 985k (17E, 965k)
+  req: PFC 38 14s
+  req: AAA 160 14s
+  req: Clear all 15s over 965k (22E, 930k)
+  req: PFC 14 15s
+  req: AAA 80 15s
+  req: Clear all 16s over 930k (27E, 880k)
+  req: PFC 3 16s
+  req: AAA 38 16s
+  req: Clear 80 17s over 880k (16E, 830k)
+  req: AAA 6 17s
+  req: Clear 14 18s over 780k (3E)
+  req: 930k+ an 18
+  req: MFC a 3+
+  req: SDP a 12+
+  req: MA Points: 3
+  req: Earn Pearl or above on 2 Trials
+  sub: Full Combo all 14s over 993k (12E, 985k)
+  sub: PFC 80 14s
+  sub: LIFE4 Clear all 15s over 985k (17E, 965k)
+  sub: PFC 38 15s
+  sub: AAA 160 15s
+  sub: Clear all 16s over 965k (22E, 930k)
+  sub: PFC 14 16s
+  sub: AAA 80 16s
+  sub: Clear all 17s over 930k (17E, 880k)
+  sub: AAA 16 17s
+  sub: 980k+ an 18
+  sub: MFC an 8+
+  sub: SDP 3 13+s
+## Topaz 4
+  req: LIFE4 Clear all 14s over 987k (16E, 970k)
+  req: PFC 44 14s
+  req: AAA 180 14s
+  req: Clear all 15s over 970k (21E, 940k)
+  req: PFC 17 15s
+  req: AAA 90 15s
+  req: Clear all 16s over 940k (26E, 890k)
+  req: PFC 4 16s
+  req: AAA 44 16s
+  req: Clear 90 17s over 890k (18E, 840k)
+  req: AAA 8 17s
+  req: Clear 17 18s over 790k (4E)
+  req: 940k+ an 18
+  req: MFC a 4+
+  req: SDP 2 12+s
+  req: MA Points: 4
+  req: Earn Pearl or above on 2 Trials
+  sub: Full Combo all 14s over 994k (11E, 987k)
+  sub: PFC 90 14s
+  sub: LIFE4 Clear all 15s over 987k (16E, 970k)
+  sub: PFC 44 15s
+  sub: AAA 180 15s
+  sub: Clear all 16s over 970k (21E, 940k)
+  sub: PFC 17 16s
+  sub: AAA 90 16s
+  sub: Clear all 17s over 940k (16E, 890k)
+  sub: AAA 18 17s
+  sub: 985k+ an 18
+  sub: MFC a 9+
+  sub: SDP 4 13+s
+## Topaz 5
+  req: LIFE4 Clear all 14s over 990k (15E, 975k)
+  req: PFC 50 14s
+  req: Clear all 15s over 975k (20E, 950k)
+  req: PFC 20 15s
+  req: AAA 100 15s
+  req: Clear all 16s over 950k (25E, 900k)
+  req: PFC 5 16s
+  req: AAA 50 16s
+  req: Clear 100 17s over 900k (20E, 850k)
+  req: AAA 10 17s
+  req: Clear 20 18s over 800k (5E, 750k)
+  req: 950k+ an 18
+  req: MFC a 5+
+  req: SDP 5 12+s
+  req: MA Points: 5
+  req: Earn Topaz or above on 1 Trial
+  sub: Full Combo all 14s over 995k (10E, 990k)
+  sub: PFC 100 14s
+  sub: LIFE4 Clear all 15s over 990k (15E, 975k)
+  sub: PFC 50 15s
+  sub: Clear all 16s over 975k (20E, 950k)
+  sub: PFC 20 16s
+  sub: AAA 100 16s
+  sub: Clear all 17s over 950k (15E, 900k)
+  sub: AAA 20 17s
+  sub: AAA an 18
+  sub: MFC a 10+
+  sub: SDP 5 13+s
+## Amethyst 1
+  req: Full Combo all 14s over 991k (14E, 980k)
+  req: PFC 60 14s
+  req: LIFE4 Clear all 15s over 980k (19E, 955k)
+  req: PFC 26 15s
+  req: AAA 120 15s
+  req: Clear all 16s over 955k (24E, 910k)
+  req: PFC 8 16s
+  req: AAA 60 16s
+  req: Clear all 17s over 910k (19E, 860k)
+  req: AAA 12 17s
+  req: Clear 26 18s over 810k (6E, 760k)
+  req: 960k+ an 18
+  req: MFC a 6+
+  req: SDP a 13+
+  req: MA Points: 6
+  req: Earn Topaz or above on 1 Trial
+  sub: Great Full Combo all 14s over 996k (9E, 991k)
+  sub: PFC 120 14s
+  sub: Full Combo all 15s over 991k (14E, 980k)
+  sub: PFC 60 15s
+  sub: LIFE4 Clear all 16s over 980k (19E, 955k)
+  sub: PFC 26 16s
+  sub: AAA 112 16s
+  sub: Clear all 17s over 955k (14E, 910k)
+  sub: PFC a 17
+  sub: AAA 26 17s
+  sub: AAA 2 18s
+  sub: 700k+ a 19
+  sub: MFC an 11+
+  sub: SDP a 14+
+## Amethyst 2
+  req: Full Combo all 14s over 992k (13E, 982k)
+  req: PFC 70 14s
+  req: LIFE4 Clear all 15s over 982k (18E, 960k)
+  req: PFC 32 15s
+  req: AAA 140 15s
+  req: Clear all 16s over 960k (23E, 920k)
+  req: PFC 11 16s
+  req: AAA 70 16s
+  req: Clear all 17s over 920k (18E, 870k)
+  req: AAA 14 17s
+  req: Clear 32 18s over 820k (7E, 770k)
+  req: 970k+ an 18
+  req: MFC a 7+
+  req: SDP 2 13+s
+  req: MA Points: 7
+  req: Earn Topaz or above on 1 Trial
+  sub: Great Full Combo all 14s over 997k (8E, 992k)
+  sub: PFC 140 14s
+  sub: Full Combo all 15s over 992k (13E, 982k)
+  sub: PFC 70 15s
+  sub: LIFE4 Clear all 16s over 982k (18E, 960k)
+  sub: PFC 32 16s
+  sub: AAA 124 16s
+  sub: Clear all 17s over 960k (13E, 920k)
+  sub: PFC 2 17s
+  sub: AAA 32 17s
+  sub: AAA 4 18s
+  sub: 750k+ a 19
+  sub: MFC 3 11+s
+  sub: SDP 2 14+s
+## Amethyst 3
+  req: Full Combo all 14s over 993k (12E, 985k)
+  req: PFC 80 14s
+  req: LIFE4 Clear all 15s over 985k (17E, 965k)
+  req: PFC 38 15s
+  req: AAA 160 15s
+  req: Clear all 16s over 965k (22E, 930k)
+  req: PFC 14 16s
+  req: AAA 80 16s
+  req: Clear all 17s over 930k (17E, 880k)
+  req: AAA 16 17s
+  req: Clear 38 18s over 830k (8E, 780k)
+  req: 980k+ an 18
+  req: MFC an 8+
+  req: SDP 3 13+s
+  req: MA Points: 8
+  req: Earn Topaz or above on 2 Trials
+  sub: Great Full Combo all 14s over 998k (7E, 993k)
+  sub: PFC 160 14s
+  sub: Full Combo all 15s over 993k (12E, 985k)
+  sub: PFC 80 15s
+  sub: LIFE4 Clear all 16s over 985k (17E, 965k)
+  sub: PFC 38 16s
+  sub: AAA 136 16s
+  sub: Clear all 17s over 965k (12E, 930k)
+  sub: PFC 3 17s
+  sub: AAA 38 17s
+  sub: AAA 6 18s
+  sub: 800k+ a 19
+  sub: MFC a 12+
+  sub: SDP 3 14+s
+## Amethyst 4
+  req: Full Combo all 14s over 994k (11E, 987k)
+  req: PFC 90 14s
+  req: LIFE4 Clear all 15s over 987k (16E, 970k)
+  req: PFC 44 15s
+  req: AAA 180 15s
+  req: Clear all 16s over 970k (21E, 940k)
+  req: PFC 17 16s
+  req: AAA 90 16s
+  req: Clear all 17s over 940k (16E, 890k)
+  req: AAA 18 17s
+  req: Clear 44 18s over 840k (9E, 790k)
+  req: 985k+ an 18
+  req: MFC a 9+
+  req: SDP 4 13+s
+  req: MA Points: 9
+  req: Earn Topaz or above on 2 Trials
+  sub: Great Full Combo all 14s over 998,500 (6E, 994k)
+  sub: PFC 180 14s
+  sub: Full Combo all 15s over 994k (11E, 987k)
+  sub: PFC 90 15s
+  sub: LIFE4 Clear all 16s over 987k (16E, 970k)
+  sub: PFC 44 16s
+  sub: AAA 148 16s
+  sub: Clear all 17s over 970k (11E, 940k)
+  sub: PFC 4 17s
+  sub: AAA 44 17s
+  sub: AAA 8 18s
+  sub: 850k+ a 19
+  sub: MFC 2 12+s
+  sub: SDP 4 14+s
+## Amethyst 5
+  req: Full Combo all 14s over 995k (10E, 990k)
+  req: PFC 100 14s
+  req: LIFE4 Clear all 15s over 990k (15E, 975k)
+  req: PFC 50 15s
+  req: Clear all 16s over 975k (20E, 950k)
+  req: PFC 20 16s
+  req: AAA 100 16s
+  req: Clear all 17s over 950k (15E, 900k)
+  req: AAA 20 17s
+  req: Clear 50 18s over 850k (10E, 800k)
+  req: AAA an 18
+  req: MFC a 10+
+  req: SDP 5 13+s
+  req: MA Points: 10
+  req: Earn Amethyst or above on 1 Trial
+  sub: Great Full Combo all 14s over 999k (5E, 995k)
+  sub: PFC 200 14s
+  sub: Full Combo all 15s over 995k (10E, 990k)
+  sub: PFC 100 15s
+  sub: LIFE4 Clear all 16s over 990k (15E, 975k)
+  sub: PFC 50 16s
+  sub: Clear all 17s over 975k (10E, 950k)
+  sub: PFC 5 17s
+  sub: AAA 50 17s
+  sub: AAA 10 18s
+  sub: 900k+ a 19
+  sub: MFC 5 12+s
+  sub: SDP 5 14+s
+## Emerald 1
+  req: Great Full Combo all 14s over 996k (9E, 991k)
+  req: PFC 120 14s
+  req: Full Combo all 15s over 991k (14E, 980k)
+  req: PFC 60 15s
+  req: LIFE4 Clear all 16s over 980k (19E, 955k)
+  req: PFC 26 16s
+  req: AAA 112 16s
+  req: Clear all 17s over 955k (14E, 910k)
+  req: PFC a 17
+  req: AAA 26 17s
+  req: Clear 56 18s over 860k (12E, 810k)
+  req: AAA 2 18s
+  req: Clear a 19
+  req: 700k+ a 19
+  req: MFC an 11+
+  req: SDP a 14+
+  req: MA Points: 12
+  req: Earn Amethyst or above on 1 Trial
+  sub: PFC all 14s with a 999,500 Folder Average (4E, 996k)
+  sub: Great Full Combo all 15s over 996k (9E, 991k)
+  sub: PFC 120 15s
+  sub: Full Combo all 16s over 991k (14E, 980k)
+  sub: PFC 60 16s
+  sub: LIFE4 Clear all 17s over 980k (10E, 955k)
+  sub: PFC 8 17s
+  sub: AAA 60 17s
+  sub: Clear all 18s over 910k (19E, 860k)
+  sub: AAA 12 18s
+  sub: 910k+ a 19
+  sub: MFC a 13+
+  sub: SDP a 15+
+## Emerald 2
+  req: Great Full Combo all 14s over 997k (8E, 992k)
+  req: PFC 140 14s
+  req: Full Combo all 15s over 992k (13E, 982k)
+  req: PFC 70 15s
+  req: LIFE4 Clear all 16s over 982k (18E, 960k)
+  req: PFC 32 16s
+  req: AAA 124 16s
+  req: Clear all 17s over 960k (13E, 920k)
+  req: PFC 2 17s
+  req: AAA 32 17s
+  req: Clear 62 18s over 870k (14E, 820k)
+  req: AAA 4 18s
+  req: Clear 2 19s
+  req: 750k+ a 19
+  req: MFC 3 11+s
+  req: SDP 2 14+s
+  req: MA Points: 14
+  req: Earn Amethyst or above on 1 Trial
+  sub: PFC all 14s with a 999,550 Folder Average (3E, 997k)
+  sub: Great Full Combo all 15s over 997k (8E, 992k)
+  sub: PFC 140 15s
+  sub: Full Combo all 16s over 992k (13E, 982k)
+  sub: PFC 70 16s
+  sub: LIFE4 Clear all 17s over 982k (10E, 960k)
+  sub: PFC 11 17s
+  sub: AAA 70 17s
+  sub: Clear all 18s over 920k (18E, 870k)
+  sub: AAA 14 18s
+  sub: 920k+ a 19
+  sub: MFC 2 13+s
+  sub: SDP 2 15+s
+## Emerald 3
+  req: Great Full Combo all 14s over 998k (7E, 993k)
+  req: PFC 160 14s
+  req: Full Combo all 15s over 993k (12E, 985k)
+  req: PFC 80 15s
+  req: LIFE4 Clear all 16s over 985k (17E, 965k)
+  req: PFC 38 16s
+  req: AAA 136 16s
+  req: Clear all 17s over 965k (12E, 930k)
+  req: PFC 3 17s
+  req: AAA 38 17s
+  req: Clear 68 18s over 880k (16E, 830k)
+  req: AAA 6 18s
+  req: Clear 3 19s
+  req: 800k+ a 19
+  req: MFC a 12+
+  req: SDP 3 14+s
+  req: MA Points: 16
+  req: Earn Amethyst or above on 2 Trials
+  sub: PFC all 14s with a 999,600 Folder Average (2E, 998k)
+  sub: Great Full Combo all 15s over 998k (7E, 993k)
+  sub: PFC 160 15s
+  sub: Full Combo all 16s over 993k (12E, 985k)
+  sub: PFC 80 16s
+  sub: LIFE4 Clear all 17s over 985k (10E, 965k)
+  sub: PFC 14 17s
+  sub: AAA 80 17s
+  sub: Clear all 18s over 930k (17E, 880k)
+  sub: AAA 16 18s
+  sub: 930k+ a 19
+  sub: MFC 3 13+s
+  sub: SDP 3 15+s
+## Emerald 4
+  req: Great Full Combo all 14s over 998,500 (6E, 994k)
+  req: PFC 180 14s
+  req: Full Combo all 15s over 994k (11E, 987k)
+  req: PFC 90 15s
+  req: LIFE4 Clear all 16s over 987k (16E, 970k)
+  req: PFC 44 16s
+  req: AAA 148 16s
+  req: Clear all 17s over 970k (11E, 940k)
+  req: PFC 4 17s
+  req: AAA 44 17s
+  req: Clear 74 18s over 890k (18E, 840k)
+  req: AAA 8 18s
+  req: Clear 4 19s
+  req: 850k+ a 19
+  req: MFC 2 12+s
+  req: SDP 4 14+s
+  req: MA Points: 18
+  req: Earn Amethyst or above on 2 Trials
+  sub: PFC all 14s with a 999,650 Folder Average (1E, 998,500)
+  sub: Great Full Combo all 15s over 998,500 (6E, 994k)
+  sub: PFC 180 15s
+  sub: Full Combo all 16s over 994k (11E, 987k)
+  sub: PFC 90 16s
+  sub: LIFE4 Clear all 17s over 987k (10E, 970k)
+  sub: PFC 17 17s
+  sub: AAA 90 17s
+  sub: Clear all 18s over 940k (16E, 890k)
+  sub: AAA 18 18s
+  sub: 940k+ a 19
+  sub: MFC 4 13+s
+  sub: SDP 4 15+s
+## Emerald 5
+  req: Great Full Combo all 14s over 999k (5E, 995k)
+  req: PFC 200 14s
+  req: Full Combo all 15s over 995k (10E, 990k)
+  req: PFC 100 15s
+  req: LIFE4 Clear all 16s over 990k (15E, 975k)
+  req: PFC 50 16s
+  req: Clear all 17s over 975k (10E, 950k)
+  req: PFC 5 17s
+  req: AAA 50 17s
+  req: Clear 80 18s over 900k (20E, 850k)
+  req: AAA 10 18s
+  req: 750k+ 5 19s
+  req: 900k+ a 19
+  req: MFC 5 12+s
+  req: SDP 5 14+s
+  req: MA Points: 20
+  req: Earn Emerald or above on 1 Trial
+  sub: PFC all 14s with a 999,700 Folder Average
+  sub: Great Full Combo all 15s over 999k (5E, 995k)
+  sub: PFC 200 15s
+  sub: Full Combo all 16s over 995k (10E, 990k)
+  sub: PFC 100 16s
+  sub: Full Combo all 17s over 990k (10E, 975k)
+  sub: PFC 20 17s
+  sub: Clear all 18s over 950k (15E, 900k)
+  sub: AAA 20 18s
+  sub: 950k+ a 19
+  sub: MFC 5 13+s
+  sub: SDP 5 15+s
