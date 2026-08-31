@@ -10,6 +10,7 @@ from life4.life4.ranks.wording import (
     LAMP_FOR_CLEAR_TYPE,
     ClearType,
     count_phrase,
+    folder_phrase,
 )
 
 if TYPE_CHECKING:
@@ -646,3 +647,141 @@ class CountRequirement(Requirement, ProgressDisplay):
         if self.is_satisfied(data):
             return str(self)
         return f"{self} ({self.get_progress(data)})"
+
+
+class FolderRequirement(Requirement, ProgressDisplay):
+    """Every chart at a level satisfies a predicate, minus exceptions.
+
+    Absorbs LampRequirement, FloorRequirement and LampFloorRequirement, and
+    adds the Folder Average case.
+
+    Pool is REQUIRED: an optional chart must never appear here, or a chart you
+    cannot play on demand blocks the requirement forever.
+
+    Exception semantics are unified. An exception excuses a chart from the
+    *whole* requirement -- lamp included -- provided it clears the shadow
+    floor, rather than excusing only the score while holding the lamp
+    absolute. The evidence is "PFC all 14s with a 999,500 Folder Average
+    (4E, 996k)": a PFC scores exactly 1,000,000 - 10 x perfects, so a PFC
+    below 996,000 needs more than 400 Perfects on one chart -- impossible
+    under ~400 notes and vanishingly rare otherwise. Under a lamp-absolute
+    reading that clause excuses something that cannot happen, i.e. it is dead
+    syntax. A reading that renders LIFE4's own syntax inert is the wrong
+    reading.
+    """
+
+    multiple_levels = False
+    pool = ChartPool.REQUIRED
+
+    def __init__(
+        self,
+        level: int,
+        *,
+        clear_type: ClearType | None = None,
+        min_score: int | None = None,
+        average_score: int | None = None,
+        exceptions: int = 0,
+        exception_floor: int | None = None,
+    ):
+        if (min_score is None) == (average_score is None):
+            raise ValueError(
+                "a folder requirement takes exactly one of min_score or average_score"
+            )
+        self.level = level
+        self.clear_type = clear_type
+        self.min_score = min_score
+        self.average_score = average_score
+        self.exceptions = exceptions
+        self.exception_floor = exception_floor
+
+    def __str__(self):
+        return folder_phrase(
+            level=self.level,
+            clear_type=self.clear_type,
+            min_score=self.min_score,
+            average_score=self.average_score,
+            exceptions=self.exceptions,
+            exception_floor=self.exception_floor,
+        )
+
+    def _charts(self, data: "DDRDataset") -> pd.DataFrame:
+        return data.get_level(self.level, pool=self.pool)
+
+    def _lamp_ok(self, charts: pd.DataFrame) -> pd.Series:
+        if self.clear_type is None:
+            return pd.Series(True, index=charts.index)
+        return charts["lamp"] >= LAMP_FOR_CLEAR_TYPE[self.clear_type]
+
+    def _score_ok(self, charts: pd.DataFrame) -> pd.Series:
+        if self.min_score is None:
+            # An average requirement has no per-chart floor, but an unplayed
+            # chart still fails.
+            return charts["score"].notna()
+        return charts["score"] >= self.min_score
+
+    def _failing(self, charts: pd.DataFrame) -> pd.DataFrame:
+        return charts[~(self._lamp_ok(charts) & self._score_ok(charts))]
+
+    def is_satisfied(self, data: "DDRDataset") -> bool:
+        charts = self._charts(data)
+        if charts["score"].isna().any():
+            return False
+
+        failing = self._failing(charts)
+        if len(failing) > self.exceptions:
+            return False
+        if self.exception_floor is not None and not failing.empty:
+            if (failing["score"] < self.exception_floor).any():
+                return False
+
+        if self.average_score is not None:
+            if charts["score"].mean() < self.average_score:
+                return False
+        return True
+
+    def get_progress(self, data: "DDRDataset") -> str:
+        charts = self._charts(data)
+        total = len(charts)
+        parts = []
+        if self.clear_type is not None:
+            passing = int(self._lamp_ok(charts).sum())
+            if passing < total:
+                parts.append(f"Lamp {passing}/{total}")
+        if self.min_score is not None:
+            passing = int(self._score_ok(charts).sum())
+            if passing < total:
+                parts.append(f"Floor {passing}/{total}")
+        if self.average_score is not None:
+            mean = charts["score"].mean()
+            mean_str = "-" if pd.isna(mean) else f"{mean:,.0f}"
+            parts.append(f"Avg {mean_str}/{self.average_score:,}")
+        if not parts:
+            return f"{total}/{total}"
+        return "; ".join(parts)
+
+    def display_str(self, data: "DDRDataset") -> str:
+        if self.is_satisfied(data):
+            return str(self)
+        return f"{self} ({self.get_progress(data)})"
+
+    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+        charts = self._charts(data).copy()
+        charts["song"] = _song_labels(charts)
+        failing = self._failing(charts)
+
+        needs = []
+        for _, row in failing.iterrows():
+            if pd.isna(row["score"]):
+                needs.append("unplayed")
+            elif self.min_score is not None and row["score"] < self.min_score:
+                # The score gap is the actionable number, so it wins when a
+                # chart fails both conditions.
+                needs.append(f"+{self.min_score - row['score']:,.0f}")
+            else:
+                required = LAMP_FOR_CLEAR_TYPE[self.clear_type]
+                have = LAMP_LABELS[Lamp(row["lamp"])]
+                needs.append(f"{have} → {LAMP_LABELS[required]}")
+
+        out = failing[["song", "score"]].copy()
+        out["needs"] = needs
+        return _sorted_by_song(out[list(self.BLOCKER_COLUMNS)])

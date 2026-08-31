@@ -6,6 +6,7 @@ from life4.life4.core import Life4RankEnum, Life4Trial, MAPointsUnknownLevel
 from life4.life4.ranks.requirements import (
     CeilingRequirement,
     CountRequirement,
+    FolderRequirement,
     ClearRequirement,
     FloorRequirement,
     MAPointsRequirement,
@@ -368,3 +369,106 @@ def test_clear_type_and_exceptions_never_co_occur():
     # breaks the invariant fails loudly rather than being mis-evaluated.
     with pytest.raises(ValueError):
         CountRequirement(level=16, count=8, clear_type=ClearType.PERFECT, exceptions=2)
+
+
+def fc(title, level, score):
+    return chart(
+        title=title,
+        level=level,
+        score=score,
+        record_on="1/1/2026",
+        fc_date="1/2/2026",
+    )
+
+
+def test_unplayed_chart_fails_a_folder_requirement():
+    d = dataset(played("a", 16, 999_000), chart(title="b", level=16))
+    assert not FolderRequirement(level=16, min_score=955_000).is_satisfied(d)
+
+
+def test_folder_passes_when_every_chart_clears_the_floor():
+    d = dataset(played("a", 16, 960_000), played("b", 16, 999_000))
+    assert FolderRequirement(level=16, min_score=955_000).is_satisfied(d)
+
+
+def test_exception_excuses_the_lamp_not_just_the_score():
+    # The unified rule: a chart failing the lamp condition may still take an
+    # exception slot if it clears the shadow floor. Under the old
+    # lamp-absolute reading this would fail.
+    d = dataset(fc("a", 14, 995_000), played("b", 14, 985_000))
+    req = FolderRequirement(
+        level=14,
+        clear_type=ClearType.GOOD,
+        min_score=991_000,
+        exceptions=1,
+        exception_floor=980_000,
+    )
+    assert req.is_satisfied(d)
+
+
+def test_a_chart_below_the_shadow_floor_cannot_be_excused():
+    d = dataset(fc("a", 14, 995_000), played("b", 14, 970_000))
+    req = FolderRequirement(
+        level=14,
+        clear_type=ClearType.GOOD,
+        min_score=991_000,
+        exceptions=1,
+        exception_floor=980_000,
+    )
+    assert not req.is_satisfied(d)
+
+
+def test_folder_exception_budget_is_finite():
+    d = dataset(
+        fc("a", 14, 995_000),
+        played("b", 14, 985_000),
+        played("c", 14, 985_000),
+    )
+    req = FolderRequirement(
+        level=14,
+        clear_type=ClearType.GOOD,
+        min_score=991_000,
+        exceptions=1,
+        exception_floor=980_000,
+    )
+    assert not req.is_satisfied(d)
+
+
+def test_folder_average_includes_the_exception_charts():
+    # Two PFCs at 999,900 and one non-PFC exception at 996,000 average to
+    # 998,600, below the target. The exception is excused from the lamp rule
+    # but still counted in the mean.
+    d = dataset(pfc("a", 14, 10), pfc("b", 14, 10), played("c", 14, 996_000))
+    req = FolderRequirement(
+        level=14,
+        clear_type=ClearType.PERFECT,
+        average_score=999_500,
+        exceptions=1,
+        exception_floor=996_000,
+    )
+    assert not req.is_satisfied(d)
+
+
+def test_folder_average_passes_when_the_mean_clears_the_target():
+    d = dataset(pfc("a", 14, 1), pfc("b", 14, 1))
+    req = FolderRequirement(
+        level=14, clear_type=ClearType.PERFECT, average_score=999_500
+    )
+    assert req.is_satisfied(d)
+
+
+def test_folder_average_progress_reports_both_conditions():
+    d = dataset(pfc("a", 14, 10), played("b", 14, 900_000))
+    req = FolderRequirement(
+        level=14, clear_type=ClearType.PERFECT, average_score=999_500
+    )
+    progress = req.get_progress(d)
+    assert "Lamp 1/2" in progress
+    assert "Avg" in progress
+
+
+def test_folder_requires_exactly_one_of_floor_or_average():
+    with pytest.raises(ValueError):
+        FolderRequirement(level=14)
+    with pytest.raises(ValueError):
+        FolderRequirement(level=14, min_score=991_000, average_score=999_500)
