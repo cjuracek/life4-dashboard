@@ -1,3 +1,5 @@
+from conftest import chart, dataset
+
 from life4.life4.core import Life4RankEnum
 from life4.life4.ranks.registry import IN_SCOPE, load_ranks
 
@@ -62,3 +64,37 @@ def test_total_in_scope_goal_count():
         for r in subranks
     )
     assert total == 583
+
+
+def test_every_in_scope_requirement_survives_the_ui_access_path():
+    """Every requirement evaluates and renders without raising.
+
+    Life4RankDisplay reads .multiple_levels, then .level, then calls
+    is_satisfied, display_str and blockers on each requirement. A model
+    change that breaks any of those shows up here rather than as a blank
+    column in the browser.
+    """
+    charts = []
+    for level in range(1, 20):
+        charts.append(
+            chart(
+                title=f"played-{level}",
+                level=level,
+                score=950_000,
+                record_on="1/1/2026",
+            )
+        )
+        charts.append(chart(title=f"unplayed-{level}", level=level))
+    data = dataset(*charts)
+
+    evaluated = 0
+    for subranks in load_ranks().values():
+        for rank in subranks:
+            for req in (*rank.requirements, *rank.substitutions):
+                evaluated += 1
+                req.is_satisfied(data)
+                req.display_str(data)
+                req.blockers(data)
+                if not req.multiple_levels:
+                    assert isinstance(req.level, int), req
+    assert evaluated == 583
