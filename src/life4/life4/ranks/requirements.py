@@ -6,6 +6,11 @@ import pandas as pd
 from life4.data.availability import ChartPool
 from life4.ddr import LAMP_LABELS, Lamp
 from life4.life4.core import Life4RankEnum
+from life4.life4.ranks.wording import (
+    LAMP_FOR_CLEAR_TYPE,
+    ClearType,
+    count_phrase,
+)
 
 if TYPE_CHECKING:
     from life4.ddr import DDRDataset
@@ -548,3 +553,96 @@ class TrialRequirement(Requirement):
 
     def display_str(self, data: "DDRDataset") -> str:
         return str(self)
+
+
+class CountRequirement(Requirement, ProgressDisplay):
+    """At least N charts at a level (or above) satisfy a predicate.
+
+    Absorbs what were PFCRequirement, AAARequirement, ClearRequirement,
+    CeilingRequirement, MFC/SDPRequirement and MFC/SDPCountRequirement. "AAA"
+    is not a concept in the LIFE4 API -- it is min_score=990_000. A "ceiling"
+    is this class with count=1.
+
+    Pool is EARNED: a chart removed from the game still credits the score you
+    earned on it.
+    """
+
+    pool = ChartPool.EARNED
+
+    def __init__(
+        self,
+        level: int,
+        count: int,
+        *,
+        clear_type: ClearType | None = None,
+        min_score: int | None = None,
+        higher_diff: bool = False,
+        exceptions: int = 0,
+        exception_floor: int | None = None,
+    ):
+        if clear_type is not None and exceptions:
+            raise ValueError(
+                "clear_type and exceptions never co-occur in the LIFE4 data; "
+                "refusing to guess how they interact"
+            )
+        self.level = level
+        self.count = count
+        self.clear_type = clear_type
+        self.min_score = min_score
+        self.higher_diff = higher_diff
+        self.exceptions = exceptions
+        self.exception_floor = exception_floor
+        # A "d+" goal spans levels, so the UI groups it under "Other" rather
+        # than beneath a single difficulty heading.
+        self.multiple_levels = higher_diff
+
+    def __str__(self):
+        return count_phrase(
+            level=self.level,
+            count=self.count,
+            clear_type=self.clear_type,
+            min_score=self.min_score,
+            higher_diff=self.higher_diff,
+            exceptions=self.exceptions,
+            exception_floor=self.exception_floor,
+        )
+
+    def _charts(self, data: "DDRDataset") -> pd.DataFrame:
+        if self.higher_diff:
+            return data.get_levels_from(self.level, pool=self.pool)
+        return data.get_level(self.level, pool=self.pool)
+
+    def _qualifying(self, data: "DDRDataset") -> int:
+        if self.clear_type is ClearType.SDP:
+            # SDP is a predicate over perfect counts, not a lamp, so it cannot
+            # go through the lamp comparison below.
+            sdps = data.get_sdp_or_better(pool=self.pool)
+            if self.higher_diff:
+                return int((sdps["level"] >= self.level).sum())
+            return int((sdps["level"] == self.level).sum())
+
+        charts = self._charts(data)
+        if self.clear_type is not None:
+            return int((charts["lamp"] >= LAMP_FOR_CLEAR_TYPE[self.clear_type]).sum())
+
+        scores = charts["score"].dropna()
+        if self.min_score is None:
+            return len(scores)
+
+        over = scores[scores >= self.min_score]
+        if len(over) >= self.count or not self.exceptions:
+            return len(over)
+
+        slack = scores[(scores >= self.exception_floor) & (scores < self.min_score)]
+        return len(over) + min(len(slack), self.exceptions)
+
+    def is_satisfied(self, data: "DDRDataset") -> bool:
+        return self._qualifying(data) >= self.count
+
+    def get_progress(self, data: "DDRDataset") -> str:
+        return f"{self._qualifying(data)}/{self.count}"
+
+    def display_str(self, data: "DDRDataset") -> str:
+        if self.is_satisfied(data):
+            return str(self)
+        return f"{self} ({self.get_progress(data)})"

@@ -69,6 +69,13 @@ class DDRDataset:
         charts = self.charts(pool)
         return charts[charts["level"] == level]
 
+    def get_levels_from(
+        self, level: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> pd.DataFrame:
+        """Charts at this level or harder -- the API's `higher_diff` flag."""
+        charts = self.charts(pool)
+        return charts[charts["level"] >= level]
+
     def get_lamp(self, lamp: Lamp, *, pool: ChartPool = ChartPool.EARNED):
         charts = self.charts(pool)
         return charts[charts["lamp"] == lamp]

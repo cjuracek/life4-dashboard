@@ -5,6 +5,7 @@ from conftest import chart, dataset
 from life4.life4.core import Life4RankEnum, Life4Trial, MAPointsUnknownLevel
 from life4.life4.ranks.requirements import (
     CeilingRequirement,
+    CountRequirement,
     ClearRequirement,
     FloorRequirement,
     MAPointsRequirement,
@@ -15,6 +16,7 @@ from life4.life4.ranks.requirements import (
     SDPRequirement,
     TrialRequirement,
 )
+from life4.life4.ranks.wording import ClearType
 
 
 def played(title, level, score):
@@ -283,3 +285,86 @@ def test_mfc_does_not_add_sdp_points_on_top_of_mfc_points():
 def test_pfc_with_ten_perfects_is_not_sdp_or_better():
     d = dataset(pfc("a", 14, 10))
     assert len(d.get_sdp_or_better()) == 0
+
+
+def test_bare_count_ignores_unplayed_charts():
+    d = dataset(
+        played("a", 19, 720_000),
+        played("b", 19, 810_000),
+        *[chart(title=str(i), level=19) for i in range(8)],
+    )
+    assert CountRequirement(level=19, count=1).is_satisfied(d)
+    assert not CountRequirement(level=19, count=5).is_satisfied(d)
+    assert CountRequirement(level=19, count=5).get_progress(d) == "2/5"
+
+
+def test_min_score_counts_only_charts_above_it():
+    d = dataset(played("a", 18, 900_000), played("b", 18, 700_000))
+    assert CountRequirement(level=18, count=1, min_score=810_000).is_satisfied(d)
+    assert not CountRequirement(level=18, count=2, min_score=810_000).is_satisfied(d)
+
+
+def test_count_exceptions_fill_the_gap_up_to_the_limit():
+    d = dataset(
+        played("a", 18, 900_000),
+        played("b", 18, 780_000),
+        played("c", 18, 770_000),
+    )
+    req = CountRequirement(
+        level=18, count=3, min_score=810_000, exceptions=1, exception_floor=760_000
+    )
+    assert not req.is_satisfied(d)
+    assert req.get_progress(d) == "2/3"
+
+
+def test_count_exceptions_below_the_shadow_floor_do_not_count():
+    d = dataset(played("a", 18, 900_000), played("b", 18, 700_000))
+    req = CountRequirement(
+        level=18, count=2, min_score=810_000, exceptions=1, exception_floor=760_000
+    )
+    assert not req.is_satisfied(d)
+
+
+def test_lamp_count_accepts_better_lamps():
+    d = dataset(pfc("a", 16, 3), mfc("b", 16))
+    req = CountRequirement(level=16, count=2, clear_type=ClearType.PERFECT)
+    assert req.is_satisfied(d)
+
+
+def test_higher_diff_counts_charts_at_and_above_the_level():
+    d = dataset(mfc("a", 11), mfc("b", 14), mfc("c", 9))
+    req = CountRequirement(
+        level=11, count=2, clear_type=ClearType.MARVELOUS, higher_diff=True
+    )
+    assert req.is_satisfied(d)
+    assert req.get_progress(d) == "2/2"
+
+
+def test_sdp_count_accepts_an_mfc():
+    d = dataset(mfc("a", 13))
+    req = CountRequirement(
+        level=13, count=1, clear_type=ClearType.SDP, higher_diff=True
+    )
+    assert req.is_satisfied(d)
+
+
+def test_higher_diff_requirements_group_under_other():
+    assert CountRequirement(
+        level=13, count=1, clear_type=ClearType.SDP, higher_diff=True
+    ).multiple_levels
+    assert not CountRequirement(
+        level=16, count=8, clear_type=ClearType.PERFECT
+    ).multiple_levels
+
+
+def test_count_display_str_appends_progress_only_when_unsatisfied():
+    d = dataset(played("a", 18, 900_000))
+    assert CountRequirement(level=18, count=1).display_str(d) == "Clear an 18"
+    assert CountRequirement(level=18, count=3).display_str(d) == "Clear 3 18s (1/3)"
+
+
+def test_clear_type_and_exceptions_never_co_occur():
+    # Verified against all 583 in-scope goals; guard so a future snapshot that
+    # breaks the invariant fails loudly rather than being mis-evaluated.
+    with pytest.raises(ValueError):
+        CountRequirement(level=16, count=8, clear_type=ClearType.PERFECT, exceptions=2)
