@@ -118,6 +118,26 @@ class DDRDataset:
         charts = self.charts(pool)
         return charts[(charts["lamp"] == Lamp.Gold) & (charts["perfect"] < 10)]
 
+    def get_sdp_or_better(self, *, pool: ChartPool = ChartPool.EARNED) -> pd.DataFrame:
+        """Charts that satisfy an "SDP" requirement.
+
+        An MFC is a full combo with zero Perfects, and zero is a single digit,
+        so every MFC is an SDP and a strictly better one. Lamps are mutually
+        exclusive here (a 1,000,000 is White, never Gold), so the MFC case has
+        to be named explicitly or "SDP a 13+" is unsatisfiable by the best
+        possible score at that level.
+
+        Deliberately separate from get_sdps(), which backs the MA Points
+        table. That table is a scoring lookup, not a predicate: a chart falls
+        in exactly one row, and an MFC takes the MFC value -- a level 15 MFC
+        is worth 15 points, not 15 + 1.5.
+        """
+        charts = self.charts(pool)
+        return charts[
+            (charts["lamp"] >= Lamp.Gold)
+            & ((charts["perfect"] < 10) | (charts["lamp"] == Lamp.White))
+        ]
+
     def get_ma_points(self, *, pool: ChartPool = ChartPool.EARNED) -> float:
         sdp_levels = self.get_sdps(pool=pool)["level"]
         mfc_levels = self.get_lamp(Lamp.White, pool=pool)["level"]

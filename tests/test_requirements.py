@@ -259,3 +259,27 @@ def test_trial_requirement_unsatisfied_when_too_few_trials_meet_the_rank():
     trials = [make_trial(Life4RankEnum.Gold), make_trial(Life4RankEnum.Bronze)]
     d = dataset(trials=trials)
     assert not TrialRequirement(rank=Life4RankEnum.Gold, num=2).is_satisfied(d)
+
+
+def test_rank_enum_orders_platinum_below_diamond():
+    assert Life4RankEnum.Gold < Life4RankEnum.Platinum < Life4RankEnum.Diamond
+
+
+def test_rank_enum_has_ruby_above_onyx():
+    assert Life4RankEnum.Ruby > Life4RankEnum.Onyx
+
+
+def test_mfc_counts_as_an_sdp_for_requirements():
+    d = dataset(mfc("a", 13))
+    assert len(d.get_sdp_or_better()) == 1
+
+
+def test_mfc_does_not_add_sdp_points_on_top_of_mfc_points():
+    # A level 15 MFC is worth 15, not 15 + 1.5.
+    d = dataset(mfc("a", 15))
+    assert d.get_ma_points() == pytest.approx(15.0)
+
+
+def test_pfc_with_ten_perfects_is_not_sdp_or_better():
+    d = dataset(pfc("a", 14, 10))
+    assert len(d.get_sdp_or_better()) == 0
