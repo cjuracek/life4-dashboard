@@ -21,6 +21,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"life4.life4.ranks" = ["data/*.json"]
+
 [dependency-groups]
 dev = [
     "ruff>=0.8.4",
