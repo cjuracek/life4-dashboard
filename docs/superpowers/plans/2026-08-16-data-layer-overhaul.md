@@ -12,24 +12,53 @@
 
 ---
 
-## STATUS — resume here (last updated 2026-08-29)
+## STATUS — complete (last updated 2026-09-07)
 
-**No code written yet.** Tasks 1–10 are unstarted; `src/` and `app.py` are
-untouched. Everything so far is design.
+**Tasks 1–10 are implemented on `feat/data-layer-overhaul`.** 98
+tests pass, `ruff check` and `ruff format --check` are clean. The plan below is
+kept as written so the reasoning behind each decision stays readable; where the
+implementation departed from it, see **Deviations from the plan as written**
+immediately below. Read that section before treating any code block here as the
+current shape of the code.
 
-Tasks 1 and 7 are **prototyped and verified** — the code blocks in this plan were
-extracted, run, and checked against the live sheets on 2026-08-29:
+Verified against the live sheets on 2026-08-29 while prototyping Tasks 1 and 7:
+6,153 charts, **0 orphans**, **1,690 played after merge vs 265 from WORLD
+alone** — the number that motivated the whole merge layer.
 
-- **21/21 tests pass** (10 schema, 11 merge)
-- full pipeline on real data: 6,153 charts, **0 orphans**, **1,690 played after
-  merge vs 265 from WORLD alone**
+### Deviations from the plan as written
 
-So Tasks 1 and 7 can be typed in as written and should pass first try.
+Four, all deliberate, each with its reasoning in the commit that made it. The
+task text further down still describes the *pre-deviation* design.
 
-### Blocked on Cole
+1. **Blocker disclosure is `st.dialog`, not `st.popover`** (`4d62e1e`). Task 10
+   Step 6 and the Global Constraints below both call for a popover. Streamlit
+   constrains a popover to its parent column, and these render inside one of
+   five rank columns — the table got ~20% of the viewport and a song title
+   needed horizontal scrolling to read. `st.dialog` renders at page level, up
+   to 1280px. It nests inside an expander just as a popover does.
+2. **`BLOCKER_COLUMNS` is `("song", "score", "needs")`, not
+   `("title", "diff", "score", "needs")`** (`4d62e1e`). A difficulty column
+   earned its width on ~1% of rows; `_song_labels()` now appends `(<diff>)`
+   only where a title repeats within the level being considered.
+3. **Blockers sort alphabetically, not unplayed-first-then-by-score**
+   (`e69eaed`). The list is read to find a specific song. Score ordering
+   floated unplayed charts to the top and then re-sorted the remainder, which
+   reads as the list changing its mind halfway down.
+4. **Task 10 Step 8's smoke-test snippet is stale.** It asserts a non-zero
+   `at.popover` count; after deviation 1 the app renders dialogs and that
+   assertion fails. Check `len(at.button)` instead if re-running it.
 
-None. All three tab gids are supplied and verified: WORLD `638900183`,
-   CTF/A3 `1003204842`, trials `862128755`.
+Two limitations found in review (2026-09-07) and left in place deliberately:
+
+- `blockers()` does not subtract a requirement's exception allowance, so the
+  frame is every chart below target rather than the strictly-blocking subset.
+  Narrowing it means deciding *which* of the N below-floor charts an allowance
+  forgives, which no requirement defines. The dialog is titled "Charts below
+  target" so the wording matches what it contains.
+- Network and CSV-parse failures (`requests.HTTPError`, `ParserError`) are not
+  `DataError`s, so they bypass `app.py`'s single handler and surface as a
+  traceback. The likeliest production failure — the sheet becoming un-shared —
+  lands here.
 
 ### Resolved since the last session
 
@@ -55,10 +84,10 @@ None. All three tab gids are supplied and verified: WORLD `638900183`,
 
 ### Task 10 — blocker display
 
-Designed in the spec ("Blocker display (adopted)"), not yet written as a task.
-Additive; does not change Tasks 1–9. Still worth building: marking remains
-incomplete in the sense that unplayed charts dominate every floor requirement
-(Amethyst I L15: 62 below floor, all 62 unplayed).
+Written up as Task 10 below and implemented. Additive; it did not change
+Tasks 1–9. Motivation: marking remains incomplete in the sense that unplayed
+charts dominate every floor requirement (Amethyst I L15: 62 below floor, all 62
+unplayed).
 
 ### Phase 4 has no plan yet
 
@@ -74,7 +103,7 @@ blind would produce placeholders.
 - Canonical column names are lowercase snake_case throughout. No code below the loader may reference a raw sheet header.
 - Tests never touch the network and never import `streamlit`.
 - Only these 11 columns are read: `diff` `level` `title` `score` `perfect` `record_on` `pfc_date` `gfc_date` `fc_date` `life4_date` `availability`. Everything else in the sheet is ignored on purpose. Mapping is **by name**; the duplicate `M` in the WORLD header is Marvelous and Miss, both unread.
-- Streamlit floor is `>=1.62`. Use `st.cache_data(refresh_mode="background")` for data refresh; `st.popover` (not a nested `st.expander`, which Streamlit forbids) for in-expander disclosure.
+- Streamlit floor is `>=1.62`. Use `st.cache_data(refresh_mode="background")` for data refresh. For in-expander disclosure a nested `st.expander` is forbidden by Streamlit; this plan specified `st.popover`, and the implementation uses `st.dialog` instead — see deviation 1 above.
 - `uv run pytest` is the test command. `uv run ruff check .` must pass before every commit.
 - The project is installed **editable from `src/`** (setuptools `packages.find`, added during setup). `import life4` works under `uv run` with no `sys.path` manipulation — this is what lets Task 9 delete `sys.path.append("src")` from `app.py`.
 
@@ -120,13 +149,13 @@ tabs; only `perfect` differs (`P` in WORLD, `Perf` in CTF).
 - Consumes: nothing.
 - Produces: `CANONICAL_COLUMNS: tuple[str, ...]`; `NUMERIC_COLUMNS: tuple[str, ...]`; `COLUMN_ALIASES: dict[str, frozenset[str]]`; `SchemaError(Exception)`; `normalize(csv_text: str, tab_name: str) -> pd.DataFrame`. `normalize` owns dtypes: `level`, `score`, `perfect` are always numeric, blanks as `NaN`.
 
-- [ ] **Step 1: Add pytest**
+- [x] **Step 1: Add pytest**
 
 ```bash
 uv add --dev pytest
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Create `tests/test_schema.py`:
 
@@ -226,12 +255,12 @@ def test_numeric_columns_are_numeric_even_when_the_tab_is_all_blanks():
     assert pd.isna(df.loc[0, "score"])
 ```
 
-- [ ] **Step 3: Run the tests to verify they fail**
+- [x] **Step 3: Run the tests to verify they fail**
 
 Run: `uv run pytest tests/test_schema.py -v`
 Expected: FAIL — `ModuleNotFoundError: No module named 'life4.data.schema'`
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 Create `src/life4/data/schema.py`:
 
@@ -327,12 +356,12 @@ def normalize(csv_text: str, tab_name: str) -> pd.DataFrame:
     return out
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `uv run pytest tests/test_schema.py -v`
 Expected: 9 passed
 
-- [ ] **Step 6: Lint and commit**
+- [x] **Step 6: Lint and commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
@@ -353,7 +382,7 @@ git commit -m "feat(data): canonical schema mapping read columns by name alias"
 - Consumes: `CANONICAL_COLUMNS` from Task 1.
 - Produces: `DDRDataset(data: pd.DataFrame, trials: list[Life4Trial] | None = None)`; `Lamp` unchanged; all `DDRDataset` accessors now read canonical lowercase columns. Fixture helper `chart(**overrides) -> dict` and `dataset(*charts) -> DDRDataset`.
 
-- [ ] **Step 1: Write the fixture builders**
+- [x] **Step 1: Write the fixture builders**
 
 Create `tests/conftest.py`:
 
@@ -391,7 +420,7 @@ def make_dataset():
     return dataset
 ```
 
-- [ ] **Step 2: Write the failing lamp tests**
+- [x] **Step 2: Write the failing lamp tests**
 
 Create `tests/test_lamps.py`:
 
@@ -439,12 +468,12 @@ def test_level_lamp_of_a_level_with_no_charts_is_no_lamp():
     assert d.get_level_lamp(19) == Lamp.NO_LAMP
 ```
 
-- [ ] **Step 3: Run to verify they fail**
+- [x] **Step 3: Run to verify they fail**
 
 Run: `uv run pytest tests/test_lamps.py -v`
 Expected: FAIL — `DDRDataset.__init__() got an unexpected keyword argument 'trials'`
 
-- [ ] **Step 4: Rewrite DDRDataset**
+- [x] **Step 4: Rewrite DDRDataset**
 
 Replace the contents of `src/life4/ddr.py` above `get_lamp` with:
 
@@ -557,19 +586,19 @@ this task. They are rewritten wholesale in those tasks and are not exercised by
 `test_lamps.py`, so leaving them is expected — do not patch them here, and do not
 treat them as an oversight.
 
-- [ ] **Step 5: Update requirements.py column references**
+- [x] **Step 5: Update requirements.py column references**
 
 In `src/life4/life4/ranks/requirements.py`, replace `["Level"]` with
 `["level"]` and `["Score"]` with `["score"]` in `SDPRequirement.is_satisfied`,
 `SDPCountRequirement._count_sdps`, `MFCRequirement.is_satisfied`, and
 `MFCCountRequirement._count_mfcs`.
 
-- [ ] **Step 6: Run to verify they pass**
+- [x] **Step 6: Run to verify they pass**
 
 Run: `uv run pytest tests/test_lamps.py -v`
 Expected: 5 passed
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
@@ -592,7 +621,7 @@ Bug #1 in the spec. `ClearRequirement(level=19, num=1)` currently evaluates
 - Consumes: `DDRDataset` from Task 2.
 - Produces: `DDRDataset.get_level_scores(level: int) -> pd.Series` returning **played scores only**. The `return_zero` parameter is removed.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_requirements.py`:
 
@@ -644,12 +673,12 @@ def test_clear_exceptions_below_the_exception_floor_do_not_count():
     assert not req.is_satisfied(d)
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `uv run pytest tests/test_requirements.py -v`
 Expected: `test_clear_without_floor_ignores_unplayed_charts` FAILS — asserts `not satisfied` for `num=5` but gets satisfied, because unplayed charts are counted.
 
-- [ ] **Step 3: Fix `get_level_scores`**
+- [x] **Step 3: Fix `get_level_scores`**
 
 In `src/life4/ddr.py`, replace `get_level_scores`:
 
@@ -659,7 +688,7 @@ In `src/life4/ddr.py`, replace `get_level_scores`:
         return self.get_level(level)["score"].dropna()
 ```
 
-- [ ] **Step 4: Update the caller**
+- [x] **Step 4: Update the caller**
 
 In `requirements.py`, `ClearRequirement._get_valid_scores`, change the first
 line to drop the removed argument:
@@ -668,12 +697,12 @@ line to drop the removed argument:
         level_scores = data.get_level_scores(level=self.level)
 ```
 
-- [ ] **Step 5: Run to verify they pass**
+- [x] **Step 5: Run to verify they pass**
 
 Run: `uv run pytest tests/test_requirements.py -v`
 Expected: 4 passed
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
@@ -709,7 +738,7 @@ level filtering anywhere in the pipeline.
 - Consumes: `DDRDataset` from Task 2.
 - Produces: `MAPointsUnknownLevel(Exception)` in `life4.life4.core`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/test_requirements.py`:
 
@@ -760,12 +789,12 @@ def test_a_level_with_no_mapping_raises_an_actionable_error():
     assert "20" in str(exc.value)
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `uv run pytest tests/test_requirements.py -k "ma_points or sdp" -v`
 Expected: FAIL — `ImportError: cannot import name 'MAPointsUnknownLevel'`
 
-- [ ] **Step 3: Extend the mapping and add the exception**
+- [x] **Step 3: Extend the mapping and add the exception**
 
 In `src/life4/life4/core.py`, extend `MFC_POINT_MAPPING` past 16 and add the
 exception below the mappings:
@@ -803,7 +832,7 @@ class MAPointsUnknownLevel(Exception):
     """
 ```
 
-- [ ] **Step 4: Use it in `get_ma_points`**
+- [x] **Step 4: Use it in `get_ma_points`**
 
 In `src/life4/ddr.py`:
 
@@ -826,12 +855,12 @@ In `src/life4/ddr.py`:
 
 Add `MAPointsUnknownLevel` to the existing `life4.life4.core` import in `ddr.py`.
 
-- [ ] **Step 5: Run to verify they pass**
+- [x] **Step 5: Run to verify they pass**
 
 Run: `uv run pytest tests/test_requirements.py -v`
 Expected: 9 passed
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
@@ -859,7 +888,7 @@ played, but never counts against you.**
 - Consumes: nothing.
 - Produces: `AvailabilityClass` (`NORMAL`, `OPTIONAL`); `ChartPool` (`REQUIRED`, `EARNED`); `classify(value) -> AvailabilityClass`; `pool_classes(pool: ChartPool) -> frozenset[AvailabilityClass]`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_availability.py`:
 
@@ -901,12 +930,12 @@ def test_earned_pool_includes_optional_charts():
     )
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `uv run pytest tests/test_availability.py -v`
 Expected: FAIL — `ModuleNotFoundError: No module named 'life4.data.availability'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `src/life4/data/availability.py`:
 
@@ -961,12 +990,12 @@ def pool_classes(pool: ChartPool) -> frozenset[AvailabilityClass]:
     return _POOLS[pool]
 ```
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `uv run pytest tests/test_availability.py -v`
 Expected: 5 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
@@ -986,7 +1015,7 @@ git commit -m "feat(data): marked charts count when played but never block"
 - Consumes: `ChartPool`, `classify`, `pool_classes` from Task 5.
 - Produces: every `DDRDataset` accessor gains a keyword-only `pool: ChartPool = ChartPool.EARNED` argument. Every `Requirement` subclass gains a class attribute `pool: ChartPool`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `tests/test_requirements.py`:
 
@@ -1030,12 +1059,12 @@ def test_a_removed_chart_still_credits_a_score_you_earned_on_it():
     assert FloorRequirement(level=16, floor=850_000).is_satisfied(d)
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `uv run pytest tests/test_requirements.py -k optional -v`
 Expected: FAIL — the unplayed `galaxy brave` chart drags level 17's lamp to `NO_LAMP`, so `FloorRequirement.is_satisfied` returns False.
 
-- [ ] **Step 3: Add pool filtering to DDRDataset**
+- [x] **Step 3: Add pool filtering to DDRDataset**
 
 In `DDRDataset.__init__`, after deriving lamps:
 
@@ -1065,7 +1094,7 @@ Each remaining accessor (`get_lamps_for_level`, `get_level_lamp`,
 `get_songs_above_threshold`, `get_songs_in_range`, `get_level_scores`,
 `get_sdps`) takes `*, pool: ChartPool = ChartPool.EARNED` and passes it down.
 
-- [ ] **Step 4: Declare the pool on each Requirement subclass**
+- [x] **Step 4: Declare the pool on each Requirement subclass**
 
 In `requirements.py`, add to the `Requirement` ABC:
 
@@ -1082,12 +1111,12 @@ Then pass `pool=self.pool` at each `data.*` call site inside those three
 classes. `LampFloorRequirement` delegates to `LampRequirement` and
 `FloorRequirement`, which carry their own pool, so it needs no call-site change.
 
-- [ ] **Step 5: Run to verify they pass**
+- [x] **Step 5: Run to verify they pass**
 
 Run: `uv run pytest -v`
 Expected: all tests pass
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
@@ -1107,7 +1136,7 @@ git commit -m "fix(ddr): optional charts count when earned but never block requi
 - Consumes: `CANONICAL_COLUMNS` from Task 1.
 - Produces: `MergeResult(charts: pd.DataFrame, orphans: pd.DataFrame)`; `merge_scores(primary, secondary) -> MergeResult`. `primary` defines the chart pool, every chart's `level`, and `availability`. `charts` has one row per `(title, diff)` in `primary`; `orphans` holds secondary rows with no primary match.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_merge.py`:
 
@@ -1223,12 +1252,12 @@ def test_unplayed_on_both_stays_unplayed():
     assert pd.isna(merged.loc[0, "score"])
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `uv run pytest tests/test_merge.py -v`
 Expected: FAIL — `ModuleNotFoundError: No module named 'life4.data.merge'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `src/life4/data/merge.py`:
 
@@ -1317,12 +1346,12 @@ def merge_scores(primary: pd.DataFrame, secondary: pd.DataFrame) -> pd.DataFrame
     return MergeResult(charts=charts, orphans=orphans.reset_index(drop=True))
 ```
 
-- [ ] **Step 4: Run to verify they pass**
+- [x] **Step 4: Run to verify they pass**
 
 Run: `uv run pytest tests/test_merge.py -v`
 Expected: 7 passed
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
@@ -1350,19 +1379,19 @@ the dashboard silently changes with it.
 - Consumes: `normalize` from Task 1.
 - Produces: `GoogleSheetLoader(doc_id: str)` with `csv_url(gid: int) -> str`, `load(gid: int, tab_name: str) -> pd.DataFrame`, and `load_trials(gid: int) -> pd.DataFrame`.
 
-- [ ] **Step 1: Confirm the gids**
+- [x] **Step 1: Confirm the gids**
 
 All three are known and verified loading via `/export` (2026-08-29):
 WORLD `638900183` (10,822 rows), CTF/A3 `1003204842` (9,010 rows),
 trials `862128755` (4 rows). Nothing to look up.
 
-- [ ] **Step 2: Add requests**
+- [x] **Step 2: Add requests**
 
 ```bash
 uv add requests
 ```
 
-- [ ] **Step 3: Write the failing test**
+- [x] **Step 3: Write the failing test**
 
 Create `tests/test_loaders.py`:
 
@@ -1384,12 +1413,12 @@ def test_url_does_not_use_the_gviz_endpoint():
     assert "gviz" not in GoogleSheetLoader(doc_id="ABC123").csv_url(0)
 ```
 
-- [ ] **Step 4: Run to verify it fails**
+- [x] **Step 4: Run to verify it fails**
 
 Run: `uv run pytest tests/test_loaders.py -v`
 Expected: FAIL — `ModuleNotFoundError: No module named 'life4.data.loaders'`
 
-- [ ] **Step 5: Write the implementation**
+- [x] **Step 5: Write the implementation**
 
 Create `src/life4/data/loaders.py`:
 
@@ -1441,7 +1470,7 @@ class GoogleSheetLoader:
         return pd.read_csv(io.StringIO(response.text))
 ```
 
-- [ ] **Step 6: Delete the old backend**
+- [x] **Step 6: Delete the old backend**
 
 ```bash
 git rm src/life4/data/backends.py
@@ -1450,7 +1479,7 @@ git rm src/life4/data/backends.py
 Remove `ScoreTrialFetcher` from `src/life4/data/interfaces.py`; if that leaves
 the file empty, delete it too.
 
-- [ ] **Step 7: Rewrite secrets**
+- [x] **Step 7: Rewrite secrets**
 
 Replace `.streamlit/secrets.toml` with the gids from Step 1:
 
@@ -1464,12 +1493,12 @@ a3 = 1003204842
 trials = 862128755
 ```
 
-- [ ] **Step 8: Run to verify it passes**
+- [x] **Step 8: Run to verify it passes**
 
 Run: `uv run pytest tests/test_loaders.py -v`
 Expected: 2 passed
 
-- [ ] **Step 9: Verify against the live document (manual, one-off)**
+- [x] **Step 9: Verify against the live document (manual, one-off)**
 
 ```bash
 uv run python -c "
@@ -1498,7 +1527,7 @@ assert (df["level"] < 8).any(), "no sub-8 charts: a level filter leaked in"
 The sub-8 assertion matters more than it looks: 12 MFCs and 81 SDPs sit below
 level 8, worth 11.22 MA points.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
@@ -1523,7 +1552,7 @@ every requirement denominator."
 - Consumes: everything from Tasks 1–8.
 - Produces: `load_dataset() -> DDRDataset`, cached.
 
-- [ ] **Step 1: Replace app.py**
+- [x] **Step 1: Replace app.py**
 
 ```python
 import pandas as pd
@@ -1595,7 +1624,7 @@ evaluated `st.secrets` at import time, and called `sys.exit()` on completion),
 the `data_source_info.pop("source")` mutation of `st.secrets` that broke on the
 second rerun, and the `sys.path.append("src")` working-directory dependency.
 
-- [ ] **Step 2: Raise the Streamlit floor**
+- [x] **Step 2: Raise the Streamlit floor**
 
 `load_trials` already exists — Task 8 added it.
 
@@ -1620,7 +1649,7 @@ print(st.__version__, 'ok')
 Confirmed available in 1.62.0: `st.cache_data` accepts `ttl` and
 `refresh_mode` together, `refresh_mode` defaulting to `"foreground"`.
 
-- [ ] **Step 3: Fix the TYPE_CHECKING import and drop the F821 ignore**
+- [x] **Step 3: Fix the TYPE_CHECKING import and drop the F821 ignore**
 
 At the top of `src/life4/life4/ranks/requirements.py`:
 
@@ -1641,13 +1670,13 @@ ignore = ["F821"]
 
 and the now-unneeded `[tool.ruff.lint.per-file-ignores]` entry for `app.py`.
 
-- [ ] **Step 4: Verify the linter now catches what it was hiding**
+- [x] **Step 4: Verify the linter now catches what it was hiding**
 
 Run: `uv run ruff check .`
 Expected: clean. If undefined names surface elsewhere, fix them — that is the
 ignore having hidden real defects.
 
-- [ ] **Step 5: Give checkboxes stable keys**
+- [x] **Step 5: Give checkboxes stable keys**
 
 `life4_ui.py:21` uses `key=str(uuid.uuid4())`, generating a fresh key for every
 checkbox on every rerun and growing Streamlit's session state without bound.
@@ -1667,12 +1696,12 @@ Pass `group="req"` from the requirements loop and `group="sub"` from the
 substitutions loop in `_visualize_reqs`, so a requirement appearing in both
 lists does not collide. Delete the now-unused `import uuid`.
 
-- [ ] **Step 6: Run the full suite**
+- [x] **Step 6: Run the full suite**
 
 Run: `uv run pytest -v`
 Expected: all tests pass
 
-- [ ] **Step 7: Smoke-test the app**
+- [x] **Step 7: Smoke-test the app**
 
 Run: `uv run streamlit run app.py`
 
@@ -1680,7 +1709,7 @@ Confirm: the page renders, "Clear a 19" under Emerald I now shows **unsatisfied*
 (2 of your 10 nineteens are played), and 18s floor requirements are no longer
 blocked by the unplayed `Eon Break CSP`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
@@ -1722,7 +1751,7 @@ Measured on live data, Emerald I: 14s 47 blockers (32 unplayed, 15 to improve);
 - Consumes: `DDRDataset.get_level(level, *, pool)`, `ChartPool`, `Lamp`.
 - Produces: `Requirement.blockers(data) -> pd.DataFrame` with columns `title, diff, score, needs`, sorted unplayed-first then furthest-from-target. Base returns an empty frame; overridden on `FloorRequirement`, `LampRequirement`, `LampFloorRequirement`. Also adds `__str__` to `PFCRequirement` and `AAARequirement`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `tests/test_blockers.py`:
 
@@ -1805,12 +1834,12 @@ def test_pfc_and_aaa_have_stable_string_forms():
     assert "object at 0x" not in str(PFCRequirement(level=14, num=1))
 ```
 
-- [ ] **Step 2: Run to verify they fail**
+- [x] **Step 2: Run to verify they fail**
 
 Run: `uv run pytest tests/test_blockers.py -v`
 Expected: FAIL — `AttributeError: 'FloorRequirement' object has no attribute 'blockers'`
 
-- [ ] **Step 3: Add `blockers` to the requirement classes**
+- [x] **Step 3: Add `blockers` to the requirement classes**
 
 In `src/life4/life4/ranks/requirements.py`, add `import pandas as pd` at the top,
 then on the `Requirement` ABC:
@@ -1869,7 +1898,7 @@ On `LampFloorRequirement` (it owns two delegates, so combine theirs):
         return deduped.sort_values("score", na_position="first").reset_index(drop=True)
 ```
 
-- [ ] **Step 4: Add `__str__` to `PFCRequirement` and `AAARequirement`**
+- [x] **Step 4: Add `__str__` to `PFCRequirement` and `AAARequirement`**
 
 Both build their label inline inside `display_str`. Extract it so the checkbox
 key is stable. On `PFCRequirement`:
@@ -1893,12 +1922,12 @@ On `AAARequirement`:
 Then simplify each `display_str` to start from `str_to_display = str(self)`
 instead of rebuilding the same text. Do not change the rendered wording.
 
-- [ ] **Step 5: Run to verify they pass**
+- [x] **Step 5: Run to verify they pass**
 
 Run: `uv run pytest tests/test_blockers.py -v`
 Expected: 7 passed
 
-- [ ] **Step 6: Render blockers in the UI**
+- [x] **Step 6: Render blockers in the UI**
 
 In `src/life4/life4_ui.py`, replace `create_checkbox`:
 
@@ -1929,7 +1958,7 @@ In `src/life4/life4_ui.py`, replace `create_checkbox`:
 expander and Streamlit forbids nesting expanders. Verified: a popover inside an
 expander raises nothing.
 
-- [ ] **Step 7: Clear two pieces of dead weight**
+- [x] **Step 7: Clear two pieces of dead weight**
 
 `click` is no longer imported anywhere (the Click wrapper was removed in Task 9):
 
@@ -1940,7 +1969,7 @@ uv remove click
 And `app.py` still calls `st.image(..., use_container_width=True)`, which
 Streamlit deprecates after 2025-12-31. Replace with `width="stretch"`.
 
-- [ ] **Step 8: Smoke-test the rendered app**
+- [x] **Step 8: Smoke-test the rendered app**
 
 No browser is needed — drive it through Streamlit's own test harness:
 
@@ -1957,7 +1986,7 @@ print('popovers:  ', len(at.popover))
 
 Expected: no exceptions, ~30 checkboxes, and a non-zero popover count.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 uv run ruff check . && uv run ruff format .
