@@ -1,7 +1,10 @@
 from enum import IntEnum
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from pydantic import BaseModel, Field, field_validator
+
+if TYPE_CHECKING:
+    from life4.life4.ranks.requirements import Requirement
 
 MFC_POINT_MAPPING = {
     1: 0.1,
@@ -19,11 +22,23 @@ MFC_POINT_MAPPING = {
     13: 6,
     14: 8,
     15: 15,
+    # Flat from 16 up -- the LIFE4 table does not increase past this point.
     16: 25,
+    17: 25,
+    18: 25,
+    19: 25,
 }
 
 # "An SDP is worth 1/10 points of an MFC"
 SDP_POINT_MAPPING = {diff: points / 10 for diff, points in MFC_POINT_MAPPING.items()}
+
+
+class MAPointsUnknownLevel(Exception):
+    """An SDP or MFC was earned at a level with no defined MA point value.
+
+    Difficulty ratings top out at 19 today. If DDR ever adds a 20, this fires
+    rather than silently scoring it as zero.
+    """
 
 
 class Life4RankEnum(IntEnum):
