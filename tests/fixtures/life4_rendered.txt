@@ -1,0 +1,812 @@
+0.01
+0.025
+0.05
+0.1
+0.2
+0.25
+0.4
+0.5
+0.6
+0.8
+1
+1.5
+11
+12
+13
+14
+15
+16+
+2
+2-3
+2.5
+25
+4
+4-6
+6
+7-10
+700k+ a 1+
+700k+ a 10+
+700k+ a 12+
+700k+ a 13
+700k+ a 14
+700k+ a 15
+700k+ a 16
+700k+ a 17
+700k+ a 19
+700k+ a 2+
+700k+ a 3+
+700k+ a 4+
+700k+ a 5+
+700k+ a 6+
+700k+ a 7+
+700k+ a 9+
+700k+ an 11+
+700k+ an 18
+700k+ an 8+
+750k+ 5 15s
+750k+ 5 16s
+750k+ 5 17s
+750k+ 5 18s
+750k+ 5 19s
+750k+ a 15
+750k+ a 16
+750k+ a 17
+750k+ a 19
+750k+ an 18
+8
+800k+ a 1+
+800k+ a 10+
+800k+ a 12+
+800k+ a 13+
+800k+ a 14
+800k+ a 14+
+800k+ a 15
+800k+ a 16
+800k+ a 17
+800k+ a 19
+800k+ a 2+
+800k+ a 3+
+800k+ a 4+
+800k+ a 5+
+800k+ a 6+
+800k+ a 7+
+800k+ a 9+
+800k+ an 11+
+800k+ an 18
+800k+ an 8+
+850k+ a 14
+850k+ a 15
+850k+ a 16
+850k+ a 17
+850k+ a 19
+850k+ an 18
+900k+ a 1+
+900k+ a 10+
+900k+ a 12+
+900k+ a 13+
+900k+ a 14
+900k+ a 15
+900k+ a 16
+900k+ a 17
+900k+ a 19
+900k+ a 2+
+900k+ a 3+
+900k+ a 4+
+900k+ a 5+
+900k+ a 6+
+900k+ a 7+
+900k+ a 9+
+900k+ an 11+
+900k+ an 18
+900k+ an 8+
+910k+ a 15
+910k+ a 16
+910k+ a 17
+910k+ a 19
+910k+ an 18
+920k+ a 15
+920k+ a 16
+920k+ a 17
+920k+ a 19
+920k+ an 18
+925k+ a 14
+930k+ a 15
+930k+ a 16
+930k+ a 17
+930k+ a 19
+930k+ an 18
+940k+ a 15
+940k+ a 16
+940k+ a 17
+940k+ a 19
+940k+ an 18
+950k+ a 1+
+950k+ a 10+
+950k+ a 12+
+950k+ a 13
+950k+ a 14
+950k+ a 15
+950k+ a 16
+950k+ a 17
+950k+ a 19
+950k+ a 2+
+950k+ a 3+
+950k+ a 4+
+950k+ a 5+
+950k+ a 6+
+950k+ a 7+
+950k+ a 9+
+950k+ an 11+
+950k+ an 18
+950k+ an 8+
+960k+ a 14
+960k+ a 15
+960k+ a 16
+960k+ a 17
+960k+ a 19
+960k+ an 18
+970k+ a 14
+970k+ a 15
+970k+ a 16
+970k+ a 17
+970k+ a 19
+970k+ an 18
+975k+ a 13
+980k+ a 13
+980k+ a 14
+980k+ a 15
+980k+ a 16
+980k+ a 17
+980k+ a 19
+980k+ an 18
+985k+ a 13
+985k+ a 14
+985k+ a 15
+985k+ a 16
+985k+ a 17
+985k+ a 19
+985k+ an 18
+AAA 10 12s
+AAA 10 13s
+AAA 10 14s
+AAA 10 15s
+AAA 10 16s
+AAA 10 17s
+AAA 10 18s
+AAA 100 14s
+AAA 100 15s
+AAA 100 16s
+AAA 112 16s
+AAA 12 17s
+AAA 12 18s
+AAA 120 14s
+AAA 120 15s
+AAA 124 16s
+AAA 136 16s
+AAA 14 17s
+AAA 14 18s
+AAA 140 14s
+AAA 140 15s
+AAA 148 16s
+AAA 15 12s
+AAA 15 13s
+AAA 15 14s
+AAA 15 15s
+AAA 15 16s
+AAA 16 17s
+AAA 16 18s
+AAA 160 14s
+AAA 160 15s
+AAA 18 17s
+AAA 18 18s
+AAA 180 14s
+AAA 180 15s
+AAA 2 13s
+AAA 2 14s
+AAA 2 15s
+AAA 2 16s
+AAA 2 17s
+AAA 2 18s
+AAA 20 12s
+AAA 20 13s
+AAA 20 14s
+AAA 20 15s
+AAA 20 16s
+AAA 20 17s
+AAA 20 18s
+AAA 26 14s
+AAA 26 15s
+AAA 26 16s
+AAA 26 17s
+AAA 26 18s
+AAA 32 14s
+AAA 32 15s
+AAA 32 16s
+AAA 32 17s
+AAA 32 18s
+AAA 38 14s
+AAA 38 15s
+AAA 38 16s
+AAA 38 17s
+AAA 38 18s
+AAA 4 17s
+AAA 4 18s
+AAA 44 14s
+AAA 44 15s
+AAA 44 16s
+AAA 44 17s
+AAA 44 18s
+AAA 5 12s
+AAA 5 13s
+AAA 5 14s
+AAA 5 15s
+AAA 5 16s
+AAA 50 14s
+AAA 50 15s
+AAA 50 16s
+AAA 50 17s
+AAA 50 18s
+AAA 6 17s
+AAA 6 18s
+AAA 60 14s
+AAA 60 15s
+AAA 60 16s
+AAA 60 17s
+AAA 70 14s
+AAA 70 15s
+AAA 70 16s
+AAA 70 17s
+AAA 8 17s
+AAA 8 18s
+AAA 80 14s
+AAA 80 15s
+AAA 80 16s
+AAA 80 17s
+AAA 90 14s
+AAA 90 15s
+AAA 90 16s
+AAA 90 17s
+AAA a 1+
+AAA a 10+
+AAA a 12
+AAA a 13
+AAA a 14
+AAA a 15
+AAA a 16
+AAA a 17
+AAA a 19
+AAA a 2+
+AAA a 3+
+AAA a 4+
+AAA a 5+
+AAA a 6+
+AAA a 7+
+AAA a 9+
+AAA an 11+
+AAA an 18
+AAA an 8+
+Amethyst
+Bronze
+Burn 1000 calories in one day
+Burn 300 calories in one day
+Burn 350 calories in one day
+Burn 400 calories in one day
+Burn 450 calories in one day
+Burn 500 calories in one day
+Burn 550 calories in one day
+Burn 600 calories in one day
+Burn 650 calories in one day
+Burn 700 calories in one day
+Burn 750 calories in one day
+Burn 800 calories in one day
+Burn 850 calories in one day
+Burn 900 calories in one day
+Burn 950 calories in one day
+Clear 10 14s
+Clear 10 15s over 760k (2E)
+Clear 10 16s over 760k (2E)
+Clear 10 19s over 800k (5E, 750k)
+Clear 100 14s over 850k (20E, 800k)
+Clear 100 15s over 850k (20E, 800k)
+Clear 100 16s over 850k (20E, 800k)
+Clear 100 17s over 900k (20E, 850k)
+Clear 11 17s over 770k (2E)
+Clear 11 18s over 770k (2E)
+Clear 110 16s over 860k (22E, 810k)
+Clear 120 14s over 860k (22E, 810k)
+Clear 120 15s over 860k (22E, 810k)
+Clear 120 16s over 870k (24E, 820k)
+Clear 130 16s over 880k (26E, 830k)
+Clear 14 17s over 780k (3E)
+Clear 14 18s over 780k (3E)
+Clear 140 14s over 870k (24E, 820k)
+Clear 140 15s over 870k (24E, 820k)
+Clear 140 16s over 890k (28E, 840k)
+Clear 150 16s over 900k (30E, 850k)
+Clear 160 14s over 880k (26E, 830k)
+Clear 160 15s over 880k (26E, 830k)
+Clear 17 17s over 790k (4E)
+Clear 17 18s over 790k (4E)
+Clear 180 14s over 890k (28E, 840k)
+Clear 180 15s over 890k (28E, 840k)
+Clear 2 15s
+Clear 2 16s
+Clear 2 17s
+Clear 2 18s
+Clear 2 19s
+Clear 20 14s
+Clear 20 15s over 770k (4E)
+Clear 20 16s over 770k (4E)
+Clear 20 17s over 800k (5E, 750k)
+Clear 20 18s over 800k (5E, 750k)
+Clear 200 14s over 900k (30E, 850k)
+Clear 200 15s over 900k (30E, 850k)
+Clear 26 17s over 810k (6E, 760k)
+Clear 26 18s over 810k (6E, 760k)
+Clear 3 1+s in a row
+Clear 3 10+s in a row
+Clear 3 11+s in a row
+Clear 3 12+s in a row
+Clear 3 13+s in a row
+Clear 3 14+s in a row
+Clear 3 15+s in a row
+Clear 3 15s
+Clear 3 16s
+Clear 3 17s
+Clear 3 18s
+Clear 3 19s
+Clear 3 2+s in a row
+Clear 3 3+s in a row
+Clear 3 4+s in a row
+Clear 3 5+s in a row
+Clear 3 6+s in a row
+Clear 3 7+s in a row
+Clear 3 8+s in a row
+Clear 3 9+s in a row
+Clear 30 14s
+Clear 30 15s over 780k (6E)
+Clear 30 16s over 780k (6E)
+Clear 32 17s over 820k (7E, 770k)
+Clear 32 18s over 820k (7E, 770k)
+Clear 38 17s over 830k (8E, 780k)
+Clear 38 18s over 830k (8E, 780k)
+Clear 4 15s
+Clear 4 16s
+Clear 4 17s
+Clear 4 18s
+Clear 4 19s
+Clear 40 14s
+Clear 40 15s over 790k (8E)
+Clear 40 16s over 790k (8E)
+Clear 44 17s over 840k (9E, 790k)
+Clear 44 18s over 840k (9E, 790k)
+Clear 50 14s over 800k (10E, 750k)
+Clear 50 15s over 800k (10E, 750k)
+Clear 50 16s over 800k (10E, 750k)
+Clear 50 17s over 850k (10E, 800k)
+Clear 50 18s over 850k (10E, 800k)
+Clear 56 18s over 860k (12E, 810k)
+Clear 6 19s over 760k (1E)
+Clear 60 14s over 810k (12E, 760k)
+Clear 60 15s over 810k (12E, 760k)
+Clear 60 16s over 810k (12E, 760k)
+Clear 60 17s over 860k (12E, 810k)
+Clear 62 18s over 870k (14E, 820k)
+Clear 68 18s over 880k (16E, 830k)
+Clear 7 19s over 770k (2E)
+Clear 70 14s over 820k (14E, 770k)
+Clear 70 15s over 820k (14E, 770k)
+Clear 70 16s over 820k (14E, 770k)
+Clear 70 17s over 870k (14E, 820k)
+Clear 74 18s over 890k (18E, 840k)
+Clear 8 17s over 760k (1E)
+Clear 8 18s over 760k (1E)
+Clear 8 19s over 780k (3E)
+Clear 80 14s over 830k (16E, 780k)
+Clear 80 15s over 830k (16E, 780k)
+Clear 80 16s over 830k (16E, 780k)
+Clear 80 17s over 880k (16E, 830k)
+Clear 80 18s over 900k (20E, 850k)
+Clear 9 19s over 790k (4E)
+Clear 90 14s over 840k (18E, 790k)
+Clear 90 15s over 840k (18E, 790k)
+Clear 90 16s over 840k (18E, 790k)
+Clear 90 17s over 890k (18E, 840k)
+Clear a 10+
+Clear a 12+
+Clear a 13+
+Clear a 14+
+Clear a 15
+Clear a 15+
+Clear a 16
+Clear a 16+
+Clear a 17
+Clear a 17+
+Clear a 19
+Clear a 3+
+Clear a 4+
+Clear a 5+
+Clear a 6+
+Clear a 7+
+Clear a 9+
+Clear all 14s over 910k (29E, 860k)
+Clear all 14s over 920k (28E, 870k)
+Clear all 14s over 930k (27E, 880k)
+Clear all 14s over 940k (26E, 890k)
+Clear all 14s over 950k (25E, 900k)
+Clear all 14s over 955k (24E, 910k)
+Clear all 14s over 960k (23E, 920k)
+Clear all 14s over 965k (22E, 930k)
+Clear all 14s over 970k (21E, 940k)
+Clear all 14s over 975k (20E, 950k)
+Clear all 15s over 910k (29E, 860k)
+Clear all 15s over 920k (28E, 870k)
+Clear all 15s over 930k (27E, 880k)
+Clear all 15s over 940k (26E, 890k)
+Clear all 15s over 950k (25E, 900k)
+Clear all 15s over 955k (24E, 910k)
+Clear all 15s over 960k (23E, 920k)
+Clear all 15s over 965k (22E, 930k)
+Clear all 15s over 970k (21E, 940k)
+Clear all 15s over 975k (20E, 950k)
+Clear all 16s over 910k (29E, 860k)
+Clear all 16s over 920k (28E, 870k)
+Clear all 16s over 930k (27E, 880k)
+Clear all 16s over 940k (26E, 890k)
+Clear all 16s over 950k (25E, 900k)
+Clear all 16s over 955k (24E, 910k)
+Clear all 16s over 960k (23E, 920k)
+Clear all 16s over 965k (22E, 930k)
+Clear all 16s over 970k (21E, 940k)
+Clear all 16s over 975k (20E, 950k)
+Clear all 17s over 910k (19E, 860k)
+Clear all 17s over 920k (18E, 870k)
+Clear all 17s over 930k (17E, 880k)
+Clear all 17s over 940k (16E, 890k)
+Clear all 17s over 950k (15E, 900k)
+Clear all 17s over 955k (14E, 910k)
+Clear all 17s over 960k (13E, 920k)
+Clear all 17s over 965k (12E, 930k)
+Clear all 17s over 970k (11E, 940k)
+Clear all 17s over 975k (10E, 950k)
+Clear all 18s over 910k (19E, 860k)
+Clear all 18s over 920k (18E, 870k)
+Clear all 18s over 930k (17E, 880k)
+Clear all 18s over 940k (16E, 890k)
+Clear all 18s over 950k (15E, 900k)
+Clear all 18s over 955k (14E, 910k)
+Clear all 18s over 960k (13E, 920k)
+Clear all 18s over 965k (12E, 930k)
+Clear all 18s over 970k (11E, 940k)
+Clear all 18s over 975k (10E, 950k)
+Clear all 19s over 820k (5E, 770k)
+Clear all 19s over 840k (5E, 790k)
+Clear all 19s over 860k (5E, 810k)
+Clear all 19s over 880k (5E, 830k)
+Clear all 19s over 900k (4E, 850k)
+Clear an 11+
+Clear an 18
+Clear an 8+
+Cobalt
+Diamond
+Difficulty
+Earn Amethyst or above on 1 Trial
+Earn Amethyst or above on 2 Trials
+Earn Cobalt or above on 1 Trial
+Earn Cobalt or above on 2 Trials
+Earn Diamond or above on 1 Trial
+Earn Diamond or above on 2 Trials
+Earn Emerald or above on 1 Trial
+Earn Emerald or above on 2 Trials
+Earn Gold or above on 1 Trial
+Earn Gold or above on 2 Trials
+Earn Onyx or above on 1 Trial
+Earn Onyx or above on 2 Trials
+Earn Pearl or above on 1 Trial
+Earn Pearl or above on 2 Trials
+Earn Platinum or above on 1 Trial
+Earn Ruby or above on 1 Trial
+Earn Silver or above on 1 Trial
+Earn Silver or above on 2 Trials
+Earn Topaz or above on 1 Trial
+Earn Topaz or above on 2 Trials
+Emerald
+Full Combo a 1+
+Full Combo a 10+
+Full Combo a 12+
+Full Combo a 2+
+Full Combo a 3+
+Full Combo a 4+
+Full Combo a 5+
+Full Combo a 6+
+Full Combo a 7+
+Full Combo a 9+
+Full Combo all 14s over 991k (14E, 980k)
+Full Combo all 14s over 992k (13E, 982k)
+Full Combo all 14s over 993k (12E, 985k)
+Full Combo all 14s over 994k (11E, 987k)
+Full Combo all 14s over 995k (10E, 990k)
+Full Combo all 15s over 991k (14E, 980k)
+Full Combo all 15s over 992k (13E, 982k)
+Full Combo all 15s over 993k (12E, 985k)
+Full Combo all 15s over 994k (11E, 987k)
+Full Combo all 15s over 995k (10E, 990k)
+Full Combo all 16s over 991k (14E, 980k)
+Full Combo all 16s over 992k (13E, 982k)
+Full Combo all 16s over 993k (12E, 985k)
+Full Combo all 16s over 994k (11E, 987k)
+Full Combo all 16s over 995k (10E, 990k)
+Full Combo all 17s over 990k (10E, 975k)
+Full Combo all 17s over 991k (9E, 980k)
+Full Combo all 17s over 992k (8E, 982k)
+Full Combo all 17s over 993k (7E, 985k)
+Full Combo all 17s over 994k (6E, 987k)
+Full Combo all 17s over 995k (5E, 990k)
+Full Combo an 11+
+Full Combo an 8+
+Gold
+Great Full Combo all 14s over 996k (9E, 991k)
+Great Full Combo all 14s over 997k (8E, 992k)
+Great Full Combo all 14s over 998,500 (6E, 994k)
+Great Full Combo all 14s over 998k (7E, 993k)
+Great Full Combo all 14s over 999k (5E, 995k)
+Great Full Combo all 15s over 996k (9E, 991k)
+Great Full Combo all 15s over 997k (8E, 992k)
+Great Full Combo all 15s over 998,500 (6E, 994k)
+Great Full Combo all 15s over 998k (7E, 993k)
+Great Full Combo all 15s over 999k (5E, 995k)
+Great Full Combo all 16s over 996k (9E, 991k)
+Great Full Combo all 16s over 997k (8E, 992k)
+Great Full Combo all 16s over 998,500 (6E, 994k)
+Great Full Combo all 16s over 998k (7E, 993k)
+Great Full Combo all 16s over 999k (5E, 995k)
+LIFE4 Clear all 14s over 980k (19E, 955k)
+LIFE4 Clear all 14s over 982k (18E, 960k)
+LIFE4 Clear all 14s over 985k (17E, 965k)
+LIFE4 Clear all 14s over 987k (16E, 970k)
+LIFE4 Clear all 14s over 990k (15E, 975k)
+LIFE4 Clear all 15s over 980k (19E, 955k)
+LIFE4 Clear all 15s over 982k (18E, 960k)
+LIFE4 Clear all 15s over 985k (17E, 965k)
+LIFE4 Clear all 15s over 987k (16E, 970k)
+LIFE4 Clear all 15s over 990k (15E, 975k)
+LIFE4 Clear all 16s over 980k (19E, 955k)
+LIFE4 Clear all 16s over 982k (18E, 960k)
+LIFE4 Clear all 16s over 985k (17E, 965k)
+LIFE4 Clear all 16s over 987k (16E, 970k)
+LIFE4 Clear all 16s over 990k (15E, 975k)
+LIFE4 Clear all 17s over 980k (10E, 955k)
+LIFE4 Clear all 17s over 982k (10E, 960k)
+LIFE4 Clear all 17s over 985k (10E, 965k)
+LIFE4 Clear all 17s over 987k (10E, 970k)
+LIFE4 Clear all 17s over 990k (10E, 975k)
+MA Points Breakdown
+MA Points: 1
+MA Points: 10
+MA Points: 100
+MA Points: 12
+MA Points: 14
+MA Points: 16
+MA Points: 18
+MA Points: 2
+MA Points: 20
+MA Points: 26
+MA Points: 3
+MA Points: 32
+MA Points: 38
+MA Points: 4
+MA Points: 44
+MA Points: 5
+MA Points: 50
+MA Points: 6
+MA Points: 60
+MA Points: 7
+MA Points: 70
+MA Points: 8
+MA Points: 80
+MA Points: 9
+MA Points: 90
+MA Points: LIFE4 uses an "MA Point" system. You earn points for SDPs and MFCs based on the song difficulty. An SDP is worth 1/10 points of an MFC. You will need to accumulate the total number of MA points shown to complete that requirement.
+MFC 2 12+s
+MFC 2 13+s
+MFC 2 14+s
+MFC 3 11+s
+MFC 3 13+s
+MFC 3 14+s
+MFC 4 13+s
+MFC 4 14+s
+MFC 5 12+s
+MFC 5 13+s
+MFC 5 14+s
+MFC a 1+
+MFC a 10+
+MFC a 12+
+MFC a 13+
+MFC a 14+
+MFC a 2+
+MFC a 3+
+MFC a 4+
+MFC a 5+
+MFC a 6+
+MFC a 7+
+MFC a 9+
+MFC an 11+
+MFC an 8+
+Onyx
+PFC 100 14s
+PFC 100 15s
+PFC 100 16s
+PFC 11 14s
+PFC 11 15s
+PFC 11 16s
+PFC 11 17s
+PFC 112 16s
+PFC 120 14s
+PFC 120 15s
+PFC 124 16s
+PFC 136 16s
+PFC 14 14s
+PFC 14 15s
+PFC 14 16s
+PFC 14 17s
+PFC 140 14s
+PFC 140 15s
+PFC 148 16s
+PFC 160 14s
+PFC 160 15s
+PFC 160 16s
+PFC 17 14s
+PFC 17 15s
+PFC 17 16s
+PFC 17 17s
+PFC 180 14s
+PFC 180 15s
+PFC 2 12+s
+PFC 2 13+s
+PFC 2 14s
+PFC 2 15s
+PFC 2 16s
+PFC 2 17s
+PFC 2 18s
+PFC 20 14s
+PFC 20 15s
+PFC 20 16s
+PFC 20 17s
+PFC 200 14s
+PFC 200 15s
+PFC 26 14s
+PFC 26 15s
+PFC 26 16s
+PFC 26 17s
+PFC 3 11+s
+PFC 3 13+s
+PFC 3 14s
+PFC 3 15s
+PFC 3 16s
+PFC 3 17s
+PFC 3 18s
+PFC 32 14s
+PFC 32 15s
+PFC 32 16s
+PFC 32 17s
+PFC 38 14s
+PFC 38 15s
+PFC 38 16s
+PFC 38 17s
+PFC 4 13+s
+PFC 4 14s
+PFC 4 15s
+PFC 4 16s
+PFC 4 17s
+PFC 4 18s
+PFC 44 14s
+PFC 44 15s
+PFC 44 16s
+PFC 44 17s
+PFC 5 12+s
+PFC 5 13+s
+PFC 5 14s
+PFC 5 15s
+PFC 5 16s
+PFC 5 17s
+PFC 5 18s
+PFC 50 14s
+PFC 50 15s
+PFC 50 16s
+PFC 50 17s
+PFC 60 14s
+PFC 60 15s
+PFC 60 16s
+PFC 70 14s
+PFC 70 15s
+PFC 70 16s
+PFC 8 14s
+PFC 8 15s
+PFC 8 16s
+PFC 8 17s
+PFC 80 14s
+PFC 80 15s
+PFC 80 16s
+PFC 90 14s
+PFC 90 15s
+PFC 90 16s
+PFC a 1+
+PFC a 10+
+PFC a 12+
+PFC a 13
+PFC a 13+
+PFC a 14
+PFC a 15
+PFC a 16
+PFC a 17
+PFC a 2+
+PFC a 3+
+PFC a 4+
+PFC a 5+
+PFC a 6+
+PFC a 7+
+PFC a 9+
+PFC all 14s with a 999,500 Folder Average (4E, 996k)
+PFC all 14s with a 999,550 Folder Average (3E, 997k)
+PFC all 14s with a 999,600 Folder Average (2E, 998k)
+PFC all 14s with a 999,650 Folder Average (1E, 998,500)
+PFC all 14s with a 999,700 Folder Average
+PFC all 14s with a 999,720 Folder Average
+PFC all 14s with a 999,740 Folder Average
+PFC all 14s with a 999,760 Folder Average
+PFC all 14s with a 999,780 Folder Average
+PFC all 14s with a 999,800 Folder Average
+PFC all 15s with a 999,500 Folder Average (4E, 996k)
+PFC all 15s with a 999,550 Folder Average (3E, 997k)
+PFC all 15s with a 999,600 Folder Average (2E, 998k)
+PFC all 15s with a 999,600 Folder Average (4E, 996k)
+PFC all 15s with a 999,625 Folder Average (3E, 997k)
+PFC all 15s with a 999,650 Folder Average (1E, 998,500)
+PFC all 15s with a 999,650 Folder Average (2E, 998k)
+PFC all 15s with a 999,675 Folder Average (1E, 998,500)
+PFC all 15s with a 999,700 Folder Average
+PFC an 11+
+PFC an 18
+PFC an 8+
+Pearl
+Platinum
+Points per MFC
+Points per SDP
+Ruby
+SDP 2 12+s
+SDP 2 13+s
+SDP 2 14+s
+SDP 2 15+s
+SDP 2 16+s
+SDP 3 11+s
+SDP 3 13+s
+SDP 3 14+s
+SDP 3 15+s
+SDP 3 16+s
+SDP 4 13+s
+SDP 4 14+s
+SDP 4 15+s
+SDP 4 16+s
+SDP 5 12+s
+SDP 5 13+s
+SDP 5 14+s
+SDP 5 15+s
+SDP 5 16+s
+SDP a 1+
+SDP a 10+
+SDP a 12+
+SDP a 13+
+SDP a 14+
+SDP a 15+
+SDP a 16+
+SDP a 2+
+SDP a 3+
+SDP a 4+
+SDP a 5+
+SDP a 6+
+SDP a 7+
+SDP a 9+
+SDP an 11+
+SDP an 8+
+Silver
+Topaz

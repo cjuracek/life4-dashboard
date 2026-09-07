@@ -46,14 +46,15 @@ class Life4RankEnum(IntEnum):
     Bronze = 1
     Silver = 2
     Gold = 3
-    Diamond = 4
-    Platinum = 5
+    Platinum = 4
+    Diamond = 5
     Cobalt = 6
     Pearl = 7
     Topaz = 8
     Amethyst = 9
     Emerald = 10
     Onyx = 11
+    Ruby = 12
 
 
 class Life4Trial(BaseModel):

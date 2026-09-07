@@ -69,6 +69,13 @@ class DDRDataset:
         charts = self.charts(pool)
         return charts[charts["level"] == level]
 
+    def get_levels_from(
+        self, level: int, *, pool: ChartPool = ChartPool.EARNED
+    ) -> pd.DataFrame:
+        """Charts at this level or harder -- the API's `higher_diff` flag."""
+        charts = self.charts(pool)
+        return charts[charts["level"] >= level]
+
     def get_lamp(self, lamp: Lamp, *, pool: ChartPool = ChartPool.EARNED):
         charts = self.charts(pool)
         return charts[charts["lamp"] == lamp]
@@ -81,42 +88,29 @@ class DDRDataset:
         # way out or the annotation is a lie.
         return [Lamp(lamp) for lamp in self.get_level(level, pool=pool)["lamp"]]
 
-    def get_level_lamp(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> Lamp:
-        lamps = self.get_lamps_for_level(level, pool=pool)
-        return min(lamps) if lamps else Lamp.NO_LAMP
-
-    def get_num_pfcs(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> int:
-        return int((self.get_level(level, pool=pool)["lamp"] == Lamp.Gold).sum())
-
-    def get_num_AAA(self, level: int, *, pool: ChartPool = ChartPool.EARNED) -> int:
-        return int((self.get_level(level, pool=pool)["score"] >= 990_000).sum())
-
-    def get_ceiling(self, level: int, *, pool: ChartPool = ChartPool.EARNED):
-        return self.get_level(level, pool=pool)["score"].max()
-
-    def get_songs_below_threshold(
-        self, level: int, threshold: int, *, pool: ChartPool = ChartPool.EARNED
-    ) -> pd.DataFrame:
-        level_songs = self.get_level(level, pool=pool)
-        return level_songs[level_songs["score"] < threshold]
-
-    def get_songs_above_threshold(
-        self, level: int, threshold: int, *, pool: ChartPool = ChartPool.EARNED
-    ) -> pd.DataFrame:
-        level_songs = self.get_level(level, pool=pool)
-        return level_songs[level_songs["score"] >= threshold]
-
-    def get_songs_in_range(
-        self, level: int, lower: int, upper: int, *, pool: ChartPool = ChartPool.EARNED
-    ) -> pd.DataFrame:
-        level_songs = self.get_level(level, pool=pool)
-        return level_songs[
-            (level_songs["score"] >= lower) & (level_songs["score"] < upper)
-        ]
-
     def get_sdps(self, *, pool: ChartPool = ChartPool.EARNED) -> pd.DataFrame:
         charts = self.charts(pool)
         return charts[(charts["lamp"] == Lamp.Gold) & (charts["perfect"] < 10)]
+
+    def get_sdp_or_better(self, *, pool: ChartPool = ChartPool.EARNED) -> pd.DataFrame:
+        """Charts that satisfy an "SDP" requirement.
+
+        An MFC is a full combo with zero Perfects, and zero is a single digit,
+        so every MFC is an SDP and a strictly better one. Lamps are mutually
+        exclusive here (a 1,000,000 is White, never Gold), so the MFC case has
+        to be named explicitly or "SDP a 13+" is unsatisfiable by the best
+        possible score at that level.
+
+        Deliberately separate from get_sdps(), which backs the MA Points
+        table. That table is a scoring lookup, not a predicate: a chart falls
+        in exactly one row, and an MFC takes the MFC value -- a level 15 MFC
+        is worth 15 points, not 15 + 1.5.
+        """
+        charts = self.charts(pool)
+        return charts[
+            (charts["lamp"] >= Lamp.Gold)
+            & ((charts["perfect"] < 10) | (charts["lamp"] == Lamp.White))
+        ]
 
     def get_ma_points(self, *, pool: ChartPool = ChartPool.EARNED) -> float:
         sdp_levels = self.get_sdps(pool=pool)["level"]
@@ -136,9 +130,3 @@ class DDRDataset:
         sdp_points = sum(SDP_POINT_MAPPING[level] for level in sdp_levels)
         mfc_points = sum(MFC_POINT_MAPPING[level] for level in mfc_levels)
         return sdp_points + mfc_points
-
-    def get_level_scores(
-        self, level: int, *, pool: ChartPool = ChartPool.EARNED
-    ) -> pd.Series:
-        """Scores for charts actually played at this level. Unplayed excluded."""
-        return self.get_level(level, pool=pool)["score"].dropna()
