@@ -90,18 +90,29 @@ def _cell(value) -> str:
     return repr(value.item() if hasattr(value, "item") else value)
 
 
-def _describe_rows(frame: pd.DataFrame, mask: pd.Series, columns) -> str:
+def _describe_rows(
+    frame: pd.DataFrame, mask: pd.Series, columns, *, first: pd.Series | None = None
+) -> str:
     """Name the offending rows by their line in the sheet.
 
     The index is still the CSV row order at this point, so ``+ 2`` converts it
     to the line number the user sees in Google Sheets: one for the header, one
     because sheets are 1-based.
+
+    ``first`` promotes a subset of the offenders ahead of the rest. Only five
+    rows are named, so when one defect drags innocent rows into the mask with
+    it, the list has to lead with the ones actually worth fixing -- otherwise
+    truncation hides the only cell the sheet owner needs to find.
     """
     # dict.fromkeys de-duplicates while keeping order: a check on `title`
     # names ("diff", "title", "title"), and duplicate labels would make
     # .loc[label, name] return a Series instead of a cell.
     columns = list(dict.fromkeys(columns))
     offenders = frame.loc[mask, columns]
+    order = offenders.index
+    if first is not None:
+        promoted = first.reindex(order, fill_value=False).to_numpy()
+        order = order[promoted].append(order[~promoted])
     lines = [
         "    row {}: {}".format(
             label + 2,
@@ -109,7 +120,7 @@ def _describe_rows(frame: pd.DataFrame, mask: pd.Series, columns) -> str:
                 f"{name}={_cell(offenders.loc[label, name])}" for name in columns
             ),
         )
-        for label in offenders.index[:_MAX_REPORTED_ROWS]
+        for label in order[:_MAX_REPORTED_ROWS]
     ]
     extra = int(mask.sum()) - _MAX_REPORTED_ROWS
     if extra > 0:
@@ -168,11 +179,17 @@ def _raise_on_coercion_loss(frame: pd.DataFrame, tab_name: str) -> None:
         values = frame[column]
         lost = ~_blank(values) & pd.to_numeric(values, errors="coerce").isna()
         if lost.any():
+            # A cell that still fails once the thousands separators are taken
+            # out is the real defect. The rest are collateral: they parse fine
+            # on their own and only landed in `lost` because one bad cell left
+            # the whole column as strings, so they must not crowd it out.
+            unseparated = values.astype(str).str.replace(",", "", regex=False)
+            genuine = lost & pd.to_numeric(unseparated, errors="coerce").isna()
             defects.append(
                 f"  {column!r}: "
                 + _plural(int(lost.sum()), "value")
                 + " that could not be parsed as a number\n"
-                + _describe_rows(frame, lost, ("diff", "title", column))
+                + _describe_rows(frame, lost, ("diff", "title", column), first=genuine)
             )
 
     if defects:

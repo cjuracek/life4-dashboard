@@ -8,7 +8,7 @@ from life4.life4.core import Life4Rank
 from life4.life4.ranks.requirements import Requirement
 
 
-@st.dialog("Blocking charts", width="large")
+@st.dialog("Charts below target", width="large")
 def _show_blockers(requirement_label: str, blockers: pd.DataFrame) -> None:
     st.caption(requirement_label)
     st.dataframe(blockers, hide_index=True, width="stretch")

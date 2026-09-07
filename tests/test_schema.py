@@ -163,6 +163,20 @@ def test_one_junk_cell_does_not_silently_nan_every_comma_formatted_score():
     assert "pending" in str(exc.value)
 
 
+def test_the_message_leads_with_the_junk_cell_not_its_innocent_neighbours():
+    # Follows from the case above. Once one bad cell strings the column, the
+    # comma-formatted scores outnumber the culprit and sort ahead of it, so a
+    # truncated list named five innocent rows and hid the only cell worth
+    # fixing. The genuinely unparseable cells must lead.
+    good = "".join(f'ESP,16,Good{i},"99{i},670",4,4/1/2026,,,,,\n' for i in range(9))
+    csv = _rows(good, "ESP,16,TheCulprit,pending,4,4/1/2026,,,,,\n")
+    with pytest.raises(ValueDefectError) as exc:
+        normalize(csv, "world")
+    message = str(exc.value)
+    assert "pending" in message
+    assert "TheCulprit" in message
+
+
 def test_a_blank_numeric_cell_is_not_a_coercion_loss():
     csv = _rows("ESP,16,Unplayed,,,,,,,,\n")
     assert pd.isna(normalize(csv, "world").loc[0, "score"])
