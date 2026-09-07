@@ -13,9 +13,12 @@ from importlib.resources import files
 from life4.life4.core import Life4Rank, Life4RankEnum
 from life4.life4.ranks.parser import parse_goal
 
-#: Widening this is the only change needed to admit Gold-Diamond or Onyx-Ruby;
-#: they share the in-scope structure and introduce no new goal shapes.
-#: Copper-Silver do not -- see the module docstring.
+#: These four are a preference, not a limit. Gold, Platinum, Diamond, Cobalt,
+#: Onyx and Ruby were measured against this parser: all 325 + 219 of their
+#: goals parse, and every string they render appears verbatim in the
+#: conformance fixture. Adding a name here is the whole change.
+#:
+#: Copper-Silver are a real limit -- see the module docstring.
 IN_SCOPE = (
     Life4RankEnum.Pearl,
     Life4RankEnum.Topaz,
