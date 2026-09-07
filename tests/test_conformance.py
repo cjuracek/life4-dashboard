@@ -9,12 +9,33 @@ If it fails, fix life4/life4/ranks/wording.py. Do not edit the fixture to
 make it pass.
 """
 
+import json
+from importlib.resources import files
 from pathlib import Path
 
-from life4.life4.ranks.registry import load_ranks
+from life4.life4.ranks.registry import IN_SCOPE, load_ranks
 
 FIXTURE = Path(__file__).parent / "fixtures/life4_rendered.txt"
 SNAPSHOT = Path(__file__).parent / "fixtures/rendered_requirements.txt"
+
+
+def in_scope_goal_count() -> int:
+    """Goals in the vendored snapshot, counted without parsing them.
+
+    Deliberately re-reads ranks.json rather than measuring load_ranks():
+    counting the parser's own output against itself could not notice the
+    parser dropping a goal, which is the thing this count exists to catch.
+    """
+    payload = json.loads(
+        files("life4.life4.ranks").joinpath("data/ranks.json").read_text("utf-8")
+    )
+    in_scope_names = {tier.name for tier in IN_SCOPE}
+    return sum(
+        len(entry["requirements"]["goals"])
+        + len(entry["requirements"].get("substitutions") or [])
+        for entry in payload
+        if entry["name"] in in_scope_names
+    )
 
 
 def life4_strings() -> set[str]:
@@ -42,7 +63,13 @@ def test_every_generated_string_is_one_life4_actually_prints():
 
 
 def test_conformance_covers_every_in_scope_goal():
-    assert len(generated()) == 583
+    """Every in-scope goal became a string -- none silently dropped.
+
+    Derived from the snapshot, not pinned to a literal, so widening
+    IN_SCOPE stays the one-line change registry.py advertises instead of
+    ambushing the next reader with `assert 719 == 583`.
+    """
+    assert len(generated()) == in_scope_goal_count()
 
 
 def rendered_report() -> str:
@@ -61,10 +88,17 @@ def test_rendered_requirements_match_the_committed_snapshot():
     Membership would let a swap through -- rendering goal A's string for
     goal B -- since both are legitimate strings somewhere in the fixture.
 
-    To accept an intended change: delete the snapshot, re-run, review the
-    diff before committing.
+    To accept an intended change, regenerate the snapshot deliberately:
+
+        uv run scripts/write_rendered_snapshot.py
+
+    then review the diff before committing. The test never writes the file
+    itself -- an expectation the code under test can author is one that
+    cannot fail on a fresh checkout.
     """
-    report = rendered_report()
-    if not SNAPSHOT.exists():
-        SNAPSHOT.write_text(report, encoding="utf-8")
-    assert report == SNAPSHOT.read_text(encoding="utf-8")
+    assert SNAPSHOT.exists(), (
+        f"{SNAPSHOT} is missing. It is committed ground truth, not a cache; "
+        f"regenerate it with `uv run scripts/write_rendered_snapshot.py` and "
+        f"review the diff."
+    )
+    assert rendered_report() == SNAPSHOT.read_text(encoding="utf-8")
