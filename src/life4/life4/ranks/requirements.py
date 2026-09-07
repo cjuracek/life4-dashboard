@@ -58,7 +58,7 @@ class Requirement(ABC):
     multiple_levels: bool
     pool: ChartPool = ChartPool.EARNED
 
-    #: Columns every blockers() frame returns, so the UI can render them uniformly.
+    # Columns every blockers() frame returns, so the UI can render them uniformly.
     BLOCKER_COLUMNS = ("song", "score", "needs")
 
     @abstractmethod
