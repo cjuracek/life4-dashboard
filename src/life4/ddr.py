@@ -20,7 +20,7 @@ class Lamp(IntEnum):
     White = 6
 
 
-#: How each lamp is written in the UI. LIFE4's own vocabulary, not enum names.
+# How each lamp is written in the UI. LIFE4's own vocabulary, not enum names.
 LAMP_LABELS = {
     Lamp.NO_LAMP: "Not played",
     Lamp.Clear: "Clear",
@@ -118,10 +118,14 @@ class DDRDataset:
         for level in (*sdp_levels, *mfc_levels):
             if level not in MFC_POINT_MAPPING:
                 raise MAPointsUnknownLevel(
-                    f"No MA point value defined for level {level}. "
-                    f"MFC_POINT_MAPPING covers levels "
-                    f"{min(MFC_POINT_MAPPING)}-{max(MFC_POINT_MAPPING)}; "
-                    f"source the value from life4ddr.com and add it."
+                    f"An SDP or MFC was earned at level {level}, which has no "
+                    f"MA point value. MFC_POINT_MAPPING covers levels "
+                    f"{min(MFC_POINT_MAPPING)}-{max(MFC_POINT_MAPPING)}, and "
+                    f"the sheet is validated to that range at load, so this "
+                    f"means DDR has added a new difficulty tier. Source its "
+                    f"value from life4ddr.com, then widen both "
+                    f"MFC_POINT_MAPPING and LEVEL_RANGE in "
+                    f"life4/data/schema.py."
                 )
         sdp_points = sum(SDP_POINT_MAPPING[level] for level in sdp_levels)
         mfc_points = sum(MFC_POINT_MAPPING[level] for level in mfc_levels)

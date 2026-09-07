@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from life4.data.errors import DuplicateKeyError
 from life4.data.schema import CANONICAL_COLUMNS
 
 logger = logging.getLogger(__name__)
@@ -16,7 +17,7 @@ class MergeResult:
     """Merged chart history, plus any secondary rows that failed to join.
 
     WORLD is a strict superset of CTF by construction, so a non-empty
-    ``orphans`` is always a defect -- a drifted title or a removed song. It
+    `orphans` is always a defect -- a drifted title or a removed song. It
     means A3 scores have silently stopped counting, so the app surfaces it
     rather than only logging it.
     """
@@ -25,21 +26,21 @@ class MergeResult:
     orphans: pd.DataFrame
 
 
-#: Tied to `score` -- a PFC's score is a deterministic function of its perfect
-#: count, so this must come from whichever row holds the max score. Taking it
-#: independently could manufacture an SDP that never happened.
+# Tied to `score` -- a PFC's score is a deterministic function of its perfect
+# count, so this must come from whichever row holds the max score. Taking it
+# independently could manufacture an SDP that never happened.
 SCORE_BOUND_COLUMNS = ("perfect",)
 
-#: Unioning these yields max(lamp) for free: _get_lamp tests pfc -> gfc -> fc
-#: -> life4 in descending order, so a lamp earned on either cabinet surfaces.
+# Unioning these yields max(lamp) for free: _get_lamp tests pfc -> gfc -> fc
+# -> life4 in descending order, so a lamp earned on either cabinet surfaces.
 DATE_COLUMNS = ("record_on", "pfc_date", "gfc_date", "fc_date", "life4_date")
 
-#: Taken from the primary source, which defines the chart pool.
+# Taken from the primary source, which defines the chart pool.
 PRIMARY_COLUMNS = ("title", "diff", "level", "availability")
 
 
 def _raise_on_duplicate_keys(frame: pd.DataFrame, label: str) -> None:
-    """Raise loudly if ``frame`` has more than one row for any (title, diff).
+    """Raise loudly if `frame` has more than one row for any (title, diff).
 
     A duplicate key fans out silently across a merge -- one chart becomes two
     merged rows, with no warning, no log, no orphan. Both sides of the merge
@@ -52,7 +53,7 @@ def _raise_on_duplicate_keys(frame: pd.DataFrame, label: str) -> None:
     dup_keys = (
         frame.loc[dup_mask, KEY_COLUMNS].drop_duplicates().apply(tuple, axis=1).tolist()
     )
-    raise ValueError(
+    raise DuplicateKeyError(
         f"{label} has duplicate (title, diff) rows, which would silently fan "
         f"out the merge: {dup_keys}"
     )
@@ -61,8 +62,8 @@ def _raise_on_duplicate_keys(frame: pd.DataFrame, label: str) -> None:
 def merge_scores(primary: pd.DataFrame, secondary: pd.DataFrame) -> MergeResult:
     """Union two cabinets' histories into one row per chart.
 
-    ``primary`` (WORLD) defines which charts exist, their level, and their
-    availability. ``secondary`` (A3) contributes score and achievement history
+    `primary` (WORLD) defines which charts exist, their level, and their
+    availability. `secondary` (A3) contributes score and achievement history
     only, joined on (title, diff).
 
     Score is the max across sources; achievement dates are unioned; the

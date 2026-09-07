@@ -49,7 +49,7 @@ class Requirement(ABC):
     multiple_levels: bool
     pool: ChartPool = ChartPool.EARNED
 
-    #: Columns every blockers() frame returns, so the UI can render them uniformly.
+    # Columns every blockers() frame returns, so the UI can render them uniformly.
     BLOCKER_COLUMNS = ("song", "score", "needs")
 
     @abstractmethod
@@ -61,10 +61,16 @@ class Requirement(ABC):
         pass
 
     def blockers(self, data: "DDRDataset") -> pd.DataFrame:
-        """Charts preventing this requirement, worst first.
+        """Charts standing between this requirement and satisfaction.
 
-        Empty for count-based requirements ("PFC 5 16s"), which have no
+        Ordered alphabetically by song -- see _sorted_by_song for why not by
+        score. Empty for count-based requirements ("PFC 5 16s"), which have no
         denominator and therefore no specific chart to name.
+
+        Charts covered by a requirement's exception allowance are still listed:
+        the frame is every chart below target, not the subset that is strictly
+        blocking. Narrowing it means deciding which of the N below-floor charts
+        the allowance forgives, which no requirement defines today.
         """
         return pd.DataFrame(columns=list(self.BLOCKER_COLUMNS))
 
