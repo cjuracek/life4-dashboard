@@ -1,14 +1,13 @@
 import pandas as pd
 import streamlit as st
 
+from life4.data.errors import DataError
 from life4.data.loaders import GoogleSheetLoader
 from life4.data.merge import merge_scores
 from life4.ddr import DDRDataset
 from life4.life4.core import Life4Trial
 from life4.life4.ranks.a20_plus import amethyst, emerald
 from life4.life4_ui import Life4RankDisplay
-
-SINGLES_DIFFICULTIES = ("bSP", "BSP", "DSP", "ESP", "CSP")
 
 st.set_page_config(layout="wide")
 
@@ -24,13 +23,9 @@ def load_frames():
     return world, a3, trials
 
 
-def _singles(df: pd.DataFrame) -> pd.DataFrame:
-    return df[df["diff"].isin(SINGLES_DIFFICULTIES)]
-
-
 def load_dataset() -> tuple[DDRDataset, pd.DataFrame]:
     world, a3, trials = load_frames()
-    result = merge_scores(_singles(world), _singles(a3))
+    result = merge_scores(world, a3)
     trial_models = [Life4Trial(**row) for _, row in trials.iterrows()]
     return DDRDataset(result.charts, trials=trial_models), result.orphans
 
@@ -39,7 +34,15 @@ def main() -> None:
     if st.button("Refresh data"):
         load_frames.clear()
 
-    data, orphans = load_dataset()
+    try:
+        data, orphans = load_dataset()
+    except DataError as exc:
+        # Every load-time defect lands here: a renamed column, a garbled cell,
+        # a duplicate key. The exceptions carry the remedy in their message, so
+        # render that text as text rather than as a traceback.
+        st.error("The source sheet could not be loaded.")
+        st.code(str(exc), language=None)
+        st.stop()
 
     if len(orphans):
         st.warning(

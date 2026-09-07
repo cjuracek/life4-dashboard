@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 from conftest import chart, frame
 
+from life4.data.errors import DuplicateKeyError
 from life4.data.merge import merge_scores
 
 
@@ -124,7 +125,7 @@ def test_duplicate_key_in_primary_raises():
         chart(title="a", diff="DSP", level=16),
     )
     secondary = frame(chart(title="a", diff="DSP", level=16, score=900_000))
-    with pytest.raises(ValueError, match="primary"):
+    with pytest.raises(DuplicateKeyError, match="primary"):
         merge_scores(primary, secondary)
 
 
@@ -136,5 +137,5 @@ def test_duplicate_key_in_secondary_raises():
         chart(title="a", diff="DSP", level=16, score=900_000),
         chart(title="a", diff="DSP", level=16, score=910_000),
     )
-    with pytest.raises(ValueError, match="secondary"):
+    with pytest.raises(DuplicateKeyError, match="secondary"):
         merge_scores(primary, secondary)
