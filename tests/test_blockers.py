@@ -296,7 +296,9 @@ def test_an_average_only_failure_has_no_rows():
     assert req.blockers(data).empty
 
 
-def test_blockers_group_by_category_then_sort_alphabetically():
+def test_unplayed_sort_alphabetically_and_played_sort_worst_score_first():
+    # Unplayed charts are looked up by name. Played charts within a category
+    # lead with the lowest score -- the biggest gap -- so the worst sit on top.
     data = dataset(
         played("apple", 16, 950_000),
         played("Banana", 16, 920_000),
@@ -309,11 +311,23 @@ def test_blockers_group_by_category_then_sort_alphabetically():
     assert list(report.rows["song"]) == [
         "Apricot",
         "cherry",
-        "avocado",
         "Banana",
-        "apple",
+        "avocado",
         "blueberry",
+        "apple",
     ]
+
+
+def test_to_improve_charts_sort_worst_score_first():
+    data = dataset(played("a", 16, 940_000), played("b", 16, 900_000))
+    report = FolderRequirement(level=16, min_score=950_000).blockers(data)
+    assert list(report.rows["song"]) == ["b", "a"]
+
+
+def test_equal_scores_fall_back_to_case_insensitive_title():
+    data = dataset(played("beta", 16, 950_000), played("Alpha", 16, 950_000))
+    report = sixteens(exceptions=3, exception_floor=930_000).blockers(data)
+    assert list(report.rows["song"]) == ["Alpha", "beta"]
 
 
 def test_disambiguated_titles_survive_the_category_sort():

@@ -45,21 +45,22 @@ CHECK = "✓"
 
 
 def _sorted_for_display(rows: pd.DataFrame, category: pd.Series) -> pd.DataFrame:
-    """Blockers grouped by category, then alphabetical by song within each.
+    """Blockers grouped by category; within each, worst score first.
 
-    Deliberately NOT ordered by score. The list is read to find a specific
-    song, so each group is alphabetical; a score ordering reads as the list
-    changing its mind halfway down. Grouping by category does not have that
-    problem because the gap columns say why each row sits where it does.
-    Case-insensitive because a plain sort strands lowercase titles after
-    every capitalised one.
+    Unplayed charts have no score and are looked up by name, so they sort
+    alphabetically. Played charts sort lowest score first: every chart in a
+    category is measured against the same threshold, so the lowest score is
+    the biggest gap. Ties fall back to the title, case-insensitively,
+    because a plain sort strands lowercase titles after every capitalised
+    one.
     """
     keyed = rows.assign(
         _order=category.map(_CATEGORY_ORDER).to_numpy(),
         _song=rows["song"].str.casefold().to_numpy(),
     )
+    # Unplayed scores are all NaN, so within that group only _song decides.
     return (
-        keyed.sort_values(["_order", "_song"], kind="stable")
+        keyed.sort_values(["_order", "score", "_song"], kind="stable")
         .drop(columns=["_order", "_song"])
         .reset_index(drop=True)
     )

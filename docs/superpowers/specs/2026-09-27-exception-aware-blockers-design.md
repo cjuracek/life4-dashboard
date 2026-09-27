@@ -1,7 +1,7 @@
 # Exception-Aware Blockers — Design
 
 **Date:** 2026-09-27
-**Status:** Draft — awaiting review
+**Status:** Agreed
 **Branch:** `fix/exception-aware-blockers`
 
 ## Problem
@@ -138,14 +138,20 @@ The `needs` column and `Requirement.BLOCKER_COLUMNS` are removed.
 ### Ordering
 
 Rows are grouped by category, **unplayed → must raise → exception** (or
-**unplayed → to improve**), then sorted alphabetically within each group,
-case-insensitively.
+**unplayed → to improve**). Within a group:
 
-This revises the decision in `_sorted_by_song`, which kept unplayed charts from
-floating to the top. The objection there was to a *score* ordering, which reads
-as the list changing its mind partway down. Category groups don't have that
-problem: each group is its own alphabetical list, and the gap columns explain
-why each row sits where it does.
+- **Unplayed:** alphabetical, case-insensitive. There is no score to rank, and
+  these are looked up by name.
+- **Played groups:** lowest score first, i.e. the worst chart on top. Every
+  chart in a group is measured against the same threshold, so lowest score is
+  the biggest gap. Ties fall back to case-insensitive title. A lamp-only
+  exception (score already over target) therefore sits at the bottom of the
+  exceptions.
+
+This revises the decision in `_sorted_by_song`, which kept the whole list
+alphabetical so a score ordering wouldn't read as the list changing its mind
+partway down. Category groups remove that objection: each group has one
+ordering rule, and the gap columns explain why each row sits where it does.
 
 ### Label (button text)
 
@@ -199,8 +205,8 @@ Hit Show Heroes      —         unplayed
 Danmaku shinkou      921,300   +8,700    +43,700
 Gale Rider           944,100   ✓         +20,900
 Hou                  952,610   ✓         +12,390
-Meteora -meteor-     961,500   ✓         +3,500
 TRIP MACHINE         958,820   ✓         +6,180
+Meteora -meteor-     961,500   ✓         +3,500
 ```
 
 **Lamp — "LIFE4 Clear all 16s over 985k (17E, 965k)"**
@@ -214,9 +220,9 @@ song                score     to 965k   to 985k   lamp
 Hit Show Heroes     —         unplayed
 Danmaku shinkou     958,200   +6,800    +26,800   Clear → LIFE4 Clear
 Gale Rider          971,400   ✓         +13,600   ✓
-Hou                 990,100   ✓         ✓         Clear → LIFE4 Clear
 Meteora -meteor-    979,000   ✓         +6,000    Clear → LIFE4 Clear
 TRIP MACHINE        981,650   ✓         +3,350    ✓
+Hou                 990,100   ✓         ✓         Clear → LIFE4 Clear
 ```
 
 **Average — "PFC all 14s with a 999,500 Folder Average (4E, 996k)"**
@@ -231,8 +237,8 @@ song       score     to 996k   lamp
 Chart A    —         unplayed
 Chart B    —         unplayed
 Chart C    993,400   +2,600    Great Full Combo → Perfect Full Combo
-Chart D    998,900   ✓         Great Full Combo → Perfect Full Combo
 Chart E    997,250   ✓         Full Combo → Perfect Full Combo
+Chart D    998,900   ✓         Great Full Combo → Perfect Full Combo
 Chart F    999,120   ✓         Great Full Combo → Perfect Full Combo
 ```
 
@@ -266,7 +272,7 @@ Unit tests on `BlockerReport` through `FolderRequirement.blockers`, no Streamlit
 - No-exception requirement: `N unplayed · N to improve`, no floor column.
 - Columns per shape: score-only, lamp + score, lamp + average.
 - Cells: `✓`, `+gap`, `unplayed` then blanks, `have → required`.
-- Ordering: category first, then case-insensitive alphabetical within each group.
+- Ordering: category first; unplayed alphabetical; played lowest score first, ties by case-insensitive title.
 - Average header line, including `-` when nothing is played.
 - `CountRequirement.blockers()` is empty.
 - Existing tests kept: REQUIRED pool, song-title disambiguation, the
