@@ -12,7 +12,14 @@ def _show_blockers(requirement_label: str, report: BlockerReport) -> None:
     st.caption(requirement_label)
     for line in report.header_lines():
         st.caption(line)
-    st.dataframe(report.rows, hide_index=True, width="stretch")
+    st.dataframe(
+        report.rows,
+        hide_index=True,
+        width="stretch",
+        # "%,d" always groups with commas; "localized" would follow the
+        # viewer's browser locale.
+        column_config={"score": st.column_config.NumberColumn(format="%,d")},
+    )
 
 
 class Life4RankDisplay:
