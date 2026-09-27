@@ -12,6 +12,7 @@ from life4.life4.ranks.wording import (
     ClearType,
     count_phrase,
     folder_phrase,
+    format_score,
 )
 
 if TYPE_CHECKING:
@@ -32,18 +33,40 @@ def _song_labels(charts: pd.DataFrame) -> pd.Series:
     )
 
 
-def _sorted_by_song(blockers: pd.DataFrame) -> pd.DataFrame:
-    """Blockers in alphabetical order by song title, case-insensitively.
+UNPLAYED = "unplayed"
+MUST_RAISE = "must raise"
+EXCEPTION = "exception"
+TO_IMPROVE = "to improve"
+
+# Exception and to-improve never occur in the same report, so they share a slot.
+_CATEGORY_ORDER = {UNPLAYED: 0, MUST_RAISE: 1, EXCEPTION: 2, TO_IMPROVE: 2}
+
+CHECK = "✓"
+
+
+def _sorted_for_display(rows: pd.DataFrame, category: pd.Series) -> pd.DataFrame:
+    """Blockers grouped by category, then alphabetical by song within each.
 
     Deliberately NOT ordered by score. The list is read to find a specific
-    song, so alphabetical is what makes it scannable; a score ordering put
-    unplayed charts first and then re-sorted the rest, which reads as the
-    list changing its mind halfway down. Case-insensitive because a plain
-    sort strands lowercase titles after every capitalised one.
+    song, so each group is alphabetical; a score ordering reads as the list
+    changing its mind halfway down. Grouping by category does not have that
+    problem because the gap columns say why each row sits where it does.
+    Case-insensitive because a plain sort strands lowercase titles after
+    every capitalised one.
     """
-    return blockers.sort_values(
-        "song", key=lambda song: song.str.casefold()
-    ).reset_index(drop=True)
+    keyed = rows.assign(
+        _order=category.map(_CATEGORY_ORDER).to_numpy(),
+        _song=rows["song"].str.casefold().to_numpy(),
+    )
+    return (
+        keyed.sort_values(["_order", "_song"], kind="stable")
+        .drop(columns=["_order", "_song"])
+        .reset_index(drop=True)
+    )
+
+
+def _score_gap(score: float, target: int) -> str:
+    return CHECK if score >= target else f"+{target - score:,.0f}"
 
 
 @dataclass(frozen=True)
@@ -104,9 +127,6 @@ class Requirement(ABC):
     multiple_levels: bool
     pool: ChartPool = ChartPool.EARNED
 
-    # Columns every blockers() frame returns, so the UI can render them uniformly.
-    BLOCKER_COLUMNS = ("song", "score", "needs")
-
     @abstractmethod
     def is_satisfied(self, data: "DDRDataset"):
         pass
@@ -115,19 +135,13 @@ class Requirement(ABC):
     def display_str(self, data: "DDRDataset") -> str:
         pass
 
-    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+    def blockers(self, data: "DDRDataset") -> BlockerReport:
         """Charts standing between this requirement and satisfaction.
 
-        Ordered alphabetically by song -- see _sorted_by_song for why not by
-        score. Empty for count-based requirements ("PFC 5 16s"), which have no
+        Empty for count-based requirements ("PFC 5 16s"), which have no
         denominator and therefore no specific chart to name.
-
-        Charts covered by a requirement's exception allowance are still listed:
-        the frame is every chart below target, not the subset that is strictly
-        blocking. Narrowing it means deciding which of the N below-floor charts
-        the allowance forgives, which no requirement defines today.
         """
-        return pd.DataFrame(columns=list(self.BLOCKER_COLUMNS))
+        return BlockerReport(rows=pd.DataFrame(columns=["song", "score"]))
 
 
 class ProgressDisplay(Protocol):
@@ -385,24 +399,73 @@ class FolderRequirement(Requirement, ProgressDisplay):
             return str(self)
         return f"{self} ({self.get_progress(data)})"
 
-    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+    def _categories(self, failing: pd.DataFrame) -> pd.Series:
+        scored = failing["score"].notna()
+        category = pd.Series(UNPLAYED, index=failing.index, dtype=object)
+        if not self.exceptions:
+            category[scored] = TO_IMPROVE
+            return category
+        # An exception is excused from the clear type, so only score decides.
+        qualifies = scored
+        if self.exception_floor is not None:
+            qualifies = scored & (failing["score"] >= self.exception_floor)
+        category[qualifies] = EXCEPTION
+        category[scored & ~qualifies] = MUST_RAISE
+        return category
+
+    def _gap_columns(self) -> list[str]:
+        columns = []
+        if self.exceptions and self.exception_floor is not None:
+            columns.append(f"to {format_score(self.exception_floor)}")
+        if self.min_score is not None:
+            columns.append(f"to {format_score(self.min_score)}")
+        if self.clear_type is not None:
+            columns.append("lamp")
+        return columns
+
+    def _gap_cells(self, row: pd.Series) -> list[str]:
+        cells = []
+        if self.exceptions and self.exception_floor is not None:
+            cells.append(_score_gap(row["score"], self.exception_floor))
+        if self.min_score is not None:
+            cells.append(_score_gap(row["score"], self.min_score))
+        if self.clear_type is not None:
+            required = LAMP_FOR_CLEAR_TYPE[self.clear_type]
+            if row["lamp"] >= required:
+                cells.append(CHECK)
+            else:
+                have = LAMP_LABELS[Lamp(row["lamp"])]
+                cells.append(f"{have} → {LAMP_LABELS[required]}")
+        return cells
+
+    def blockers(self, data: "DDRDataset") -> BlockerReport:
         charts = self._charts(data).copy()
         charts["song"] = _song_labels(charts)
         failing = self._failing(charts)
+        category = self._categories(failing)
 
-        needs = []
-        for _, row in failing.iterrows():
-            if pd.isna(row["score"]):
-                needs.append("unplayed")
-            elif self.min_score is not None and row["score"] < self.min_score:
-                # The score gap is the actionable number, so it wins when a
-                # chart fails both conditions.
-                needs.append(f"+{self.min_score - row['score']:,.0f}")
-            else:
-                required = LAMP_FOR_CLEAR_TYPE[self.clear_type]
-                have = LAMP_LABELS[Lamp(row["lamp"])]
-                needs.append(f"{have} → {LAMP_LABELS[required]}")
+        columns = self._gap_columns()
+        unplayed_cells = [UNPLAYED] + [""] * (len(columns) - 1) if columns else []
+        cells = [
+            unplayed_cells if cat == UNPLAYED else self._gap_cells(row)
+            for (_, row), cat in zip(failing.iterrows(), category)
+        ]
+        rows = failing[["song", "score"]].copy()
+        for i, name in enumerate(columns):
+            rows[name] = [chart_cells[i] for chart_cells in cells]
 
-        out = failing[["song", "score"]].copy()
-        out["needs"] = needs
-        return _sorted_by_song(out[list(self.BLOCKER_COLUMNS)])
+        average = None
+        if self.average_score is not None:
+            mean = charts["score"].mean()
+            average = (None if pd.isna(mean) else float(mean), self.average_score)
+
+        counts = category.value_counts()
+        return BlockerReport(
+            rows=_sorted_for_display(rows, category),
+            unplayed=int(counts.get(UNPLAYED, 0)),
+            must_raise=int(counts.get(MUST_RAISE, 0)),
+            exceptions_used=int(counts.get(EXCEPTION, 0)),
+            exceptions_allowed=self.exceptions,
+            to_improve=int(counts.get(TO_IMPROVE, 0)),
+            average=average,
+        )
