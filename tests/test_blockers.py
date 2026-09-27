@@ -1,6 +1,8 @@
+import pandas as pd
 from conftest import chart, dataset
 
 from life4.life4.ranks.requirements import (
+    BlockerReport,
     CountRequirement,
     FolderRequirement,
     Requirement,
@@ -153,3 +155,49 @@ def test_three_way_collision_suffixes_all_three():
         "collider (DSP)",
         "collider (ESP)",
     }
+
+
+def report(**counts):
+    return BlockerReport(rows=pd.DataFrame(columns=["song", "score"]), **counts)
+
+
+def test_label_with_exceptions_names_unplayed_must_raise_and_exception_budget():
+    r = report(unplayed=1, must_raise=1, exceptions_used=4, exceptions_allowed=3)
+    assert r.label() == "1 unplayed · 1 must raise · 4/3 exceptions"
+
+
+def test_label_omits_zero_count_parts():
+    assert report(unplayed=4, exceptions_used=2, exceptions_allowed=22).label() == (
+        "4 unplayed · 2/22 exceptions"
+    )
+    assert report(must_raise=1, exceptions_allowed=3).label() == "1 must raise"
+
+
+def test_label_without_exceptions_says_to_improve():
+    assert report(unplayed=1, to_improve=2).label() == "1 unplayed · 2 to improve"
+    assert report(unplayed=1).label() == "1 unplayed"
+
+
+def test_header_lines_show_exception_budget_only_when_the_requirement_has_one():
+    assert report(exceptions_used=2, exceptions_allowed=22).header_lines() == [
+        "Exceptions: 2 used / 22 allowed"
+    ]
+    assert report(unplayed=3).header_lines() == []
+
+
+def test_header_lines_show_folder_average():
+    r = report(exceptions_used=3, exceptions_allowed=4, average=(999_310.4, 999_500))
+    assert r.header_lines() == [
+        "Exceptions: 3 used / 4 allowed",
+        "Folder average: 999,310 / 999,500",
+    ]
+
+
+def test_folder_average_reads_dash_when_nothing_is_played():
+    assert report(average=(None, 999_500)).header_lines() == [
+        "Folder average: - / 999,500"
+    ]
+
+
+def test_report_is_empty_when_it_has_no_rows():
+    assert report().empty

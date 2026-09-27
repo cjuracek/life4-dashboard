@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 import pandas as pd
@@ -43,6 +44,60 @@ def _sorted_by_song(blockers: pd.DataFrame) -> pd.DataFrame:
     return blockers.sort_values(
         "song", key=lambda song: song.str.casefold()
     ).reset_index(drop=True)
+
+
+@dataclass(frozen=True)
+class BlockerReport:
+    """Where each chart failing a requirement stands, and the text to show it.
+
+    States facts only. Nothing here marks a chart as done or as the one to
+    work on: when more charts sit above the shadow floor than there are
+    exceptions, which ones the allowance forgives is the player's choice, and
+    fewest points is not least effort.
+    """
+
+    rows: pd.DataFrame
+    unplayed: int = 0
+    must_raise: int = 0
+    exceptions_used: int = 0
+    exceptions_allowed: int = 0
+    to_improve: int = 0
+    # (mean of played charts, target), for Folder Average requirements.
+    average: tuple[float | None, int] | None = None
+
+    @property
+    def empty(self) -> bool:
+        return self.rows.empty
+
+    def label(self) -> str:
+        if self.exceptions_allowed:
+            parts = [
+                (self.unplayed, f"{self.unplayed} unplayed"),
+                (self.must_raise, f"{self.must_raise} must raise"),
+                (
+                    self.exceptions_used,
+                    f"{self.exceptions_used}/{self.exceptions_allowed} exceptions",
+                ),
+            ]
+        else:
+            parts = [
+                (self.unplayed, f"{self.unplayed} unplayed"),
+                (self.to_improve, f"{self.to_improve} to improve"),
+            ]
+        return " · ".join(text for count, text in parts if count)
+
+    def header_lines(self) -> list[str]:
+        lines = []
+        if self.exceptions_allowed:
+            lines.append(
+                f"Exceptions: {self.exceptions_used} used / "
+                f"{self.exceptions_allowed} allowed"
+            )
+        if self.average is not None:
+            current, target = self.average
+            current_str = "-" if current is None else f"{current:,.0f}"
+            lines.append(f"Folder average: {current_str} / {target:,}")
+        return lines
 
 
 class Requirement(ABC):
