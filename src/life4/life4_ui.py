@@ -15,9 +15,7 @@ def _show_blockers(requirement_label: str, report: BlockerReport) -> None:
     st.dataframe(
         report.rows,
         hide_index=True,
-        # Size columns to their contents; "stretch" pads every column to fill
-        # the dialog, pushing the numbers far from the song they belong to.
-        width="content",
+        width="stretch",
         # "%,d" always groups with commas; "localized" would follow the
         # viewer's browser locale.
         column_config={"score": st.column_config.NumberColumn(format="%,d")},
