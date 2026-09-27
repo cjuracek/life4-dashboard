@@ -21,11 +21,14 @@ class Life4RankDisplay:
 
     def create_checkbox(self, requirement: Requirement, group: str):
         satisfied = requirement.is_satisfied(self.data)
+        # A keyed checkbox's identity is its key alone, so Streamlit keeps its
+        # session value and ignores `value=` on later reruns. Keying on
+        # `satisfied` makes a flip after "Refresh data" a new widget.
         st.checkbox(
             requirement.display_str(self.data),
             disabled=True,
             value=satisfied,
-            key=f"{self.life4_rank}|{group}|{requirement}",
+            key=f"{self.life4_rank}|{group}|{requirement}|{satisfied}",
         )
         if satisfied:
             return
