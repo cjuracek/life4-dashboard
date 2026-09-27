@@ -1,17 +1,18 @@
 from typing import List
 
-import pandas as pd
 import streamlit as st
 
 from life4.ddr import DDRDataset
 from life4.life4.core import Life4Rank
-from life4.life4.ranks.requirements import Requirement
+from life4.life4.ranks.requirements import BlockerReport, Requirement
 
 
 @st.dialog("Charts below target", width="large")
-def _show_blockers(requirement_label: str, blockers: pd.DataFrame) -> None:
+def _show_blockers(requirement_label: str, report: BlockerReport) -> None:
     st.caption(requirement_label)
-    st.dataframe(blockers, hide_index=True, width="stretch")
+    for line in report.header_lines():
+        st.caption(line)
+    st.dataframe(report.rows, hide_index=True, width="stretch")
 
 
 class Life4RankDisplay:
@@ -33,15 +34,14 @@ class Life4RankDisplay:
         if satisfied:
             return
 
-        blockers = requirement.blockers(self.data)
-        if blockers.empty:
+        report = requirement.blockers(self.data)
+        if report.empty:
             return
 
-        unplayed = int(blockers["score"].isna().sum())
-        to_improve = len(blockers) - unplayed
-        label = f"{unplayed} unplayed · {to_improve} to improve"
-        if st.button(label, key=f"{self.life4_rank}|{group}|{requirement}|blockers"):
-            _show_blockers(requirement.display_str(self.data), blockers)
+        if st.button(
+            report.label(), key=f"{self.life4_rank}|{group}|{requirement}|blockers"
+        ):
+            _show_blockers(requirement.display_str(self.data), report)
 
     def _visualize_reqs(self, requirements: List[Requirement], group: str):
         requirement_levels = range(14, 20)
