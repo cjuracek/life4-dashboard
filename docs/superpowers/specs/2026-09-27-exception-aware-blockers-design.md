@@ -98,7 +98,8 @@ the constructor permits it) treats every scored failing chart as an exception.
 ```python
 @dataclass(frozen=True)
 class BlockerReport:
-    rows: pd.DataFrame          # song, score, then the gap columns below
+    required_rows: pd.DataFrame   # unplayed, must raise, to improve
+    exception_rows: pd.DataFrame  # exception
     unplayed: int
     must_raise: int
     exceptions_used: int
@@ -107,10 +108,37 @@ class BlockerReport:
     average: tuple[float | None, int] | None   # (current, target) or None
 
     @property
-    def empty(self) -> bool: ...
+    def empty(self) -> bool: ...        # both tables empty
+    @property
+    def over_budget(self) -> bool: ...  # exceptions_used > exceptions_allowed
     def label(self) -> str: ...
     def header_lines(self) -> list[str]: ...
+    def required_title(self) -> str: ...
+    def exceptions_title(self) -> str: ...
 ```
+
+### Two tables
+
+*Revised 2026-09-29.* The dialog splits the rows in two, because the groups
+follow different rules. Every **required** row must change: an unplayed or
+must-raise chart has to reach the shadow floor whatever the budget. The
+**exceptions** are a pool: under budget none of them has to change, and over
+budget the player picks which to raise. One table sorted by category only
+showed that through row order and a column of `✓`s.
+
+| Table | Rows | Shown as |
+|---|---|---|
+| Required | unplayed, must raise, to improve | always open, when it has rows |
+| Exceptions | exception | an expander, open only when over budget |
+
+A lamp gap alone never puts a chart in Required when the requirement has
+exceptions, because exceptions are excused from the clear type. A lamp is only
+mandatory when the requirement has no exceptions, and then every failing chart
+is Required and the Exceptions table is not drawn.
+
+Collapsing the pool under budget keeps it one click away without crowding the
+rows that must change. Opening it over budget shows it when a choice has to be
+made from it.
 
 `Requirement.blockers()` (the base default, used by `CountRequirement`) returns
 an empty report.
@@ -129,6 +157,9 @@ each only when the requirement has that condition:
 Header scores use `wording.format_score` (`930k`, `998,500`). Lamp names use
 `ddr.LAMP_LABELS` ("Clear → LIFE4 Clear"), as the current `needs` column does.
 
+The Exceptions table leaves out the `to {floor}` column: every row in it is at
+or above the floor, so the column would be all `✓`.
+
 For an unplayed chart, the first gap column reads `unplayed` and the rest are
 blank. The `score` column keeps today's numeric formatting; the `—` in the
 examples below stands for however Streamlit renders a missing value.
@@ -137,8 +168,9 @@ The `needs` column and `Requirement.BLOCKER_COLUMNS` are removed.
 
 ### Ordering
 
-Rows are grouped by category, **unplayed → must raise → exception** (or
-**unplayed → to improve**). Within a group:
+The Required table is grouped by category, **unplayed → must raise** (or
+**unplayed → to improve**). The Exceptions table holds one category. Within a
+group:
 
 - **Unplayed:** alphabetical, case-insensitive. There is no score to rank, and
   these are looked up by name.
@@ -166,10 +198,22 @@ than shown.
 
 ### Header lines (dialog, under the requirement text)
 
-- With exceptions: `Exceptions: U used / A allowed`
 - With an average: `Folder average: {current:,.0f} / {target:,}`, where
   `current` is the mean of played charts (as `get_progress` computes it), or
   `-` when nothing is played
+
+The exception budget moved from the header into the Exceptions title.
+
+### Table titles
+
+- `required_title()`: `Required — ` then the label's non-exception parts,
+  e.g. `Required — 1 unplayed · 3 must raise`.
+- `exceptions_title()`: `Exceptions — U used / A allowed`, with ` (N over)`
+  appended when over budget. "N over" is a count, not a pick: it does not say
+  which charts to raise.
+
+When a requirement has exceptions but none are used, there is no Exceptions
+table; its title is shown as a caption instead, so the budget stays visible.
 
 `exceptions_used` counts only charts that qualify today. A must-raise chart is
 not counted. Raising one above the floor increases the count. That is intended,
@@ -177,20 +221,24 @@ because the count describes current scores, not a forecast.
 
 ## Examples
 
+`▸` is a collapsed expander, `▾` an open one.
+
 **Live data — "Clear all 16s over 965k (22E, 930k)"**
 
 ```
 [ 4 unplayed · 2/22 exceptions ]
 
-Exceptions: 2 used / 22 allowed
-
+Required — 4 unplayed
 song                 score     to 930k   to 965k
 Danmaku shinkou      —         unplayed
 Gale Rider           —         unplayed
 Hit Show Heroes      —         unplayed
 Meteora -meteor-     —         unplayed
-Hou                  952,610   ✓         +12,390
-TRIP MACHINE         958,820   ✓         +6,180
+
+▸ Exceptions — 2 used / 22 allowed
+  song                 score     to 965k
+  Hou                  952,610   +12,390
+  TRIP MACHINE         958,820   +6,180
 ```
 
 **Over budget — "(3E, 930k)"**
@@ -198,15 +246,17 @@ TRIP MACHINE         958,820   ✓         +6,180
 ```
 [ 1 unplayed · 1 must raise · 4/3 exceptions ]
 
-Exceptions: 4 used / 3 allowed
-
+Required — 1 unplayed · 1 must raise
 song                 score     to 930k   to 965k
 Hit Show Heroes      —         unplayed
 Danmaku shinkou      921,300   +8,700    +43,700
-Gale Rider           944,100   ✓         +20,900
-Hou                  952,610   ✓         +12,390
-TRIP MACHINE         958,820   ✓         +6,180
-Meteora -meteor-     961,500   ✓         +3,500
+
+▾ Exceptions — 4 used / 3 allowed (1 over)
+  song                 score     to 965k
+  Gale Rider           944,100   +20,900
+  Hou                  952,610   +12,390
+  TRIP MACHINE         958,820   +6,180
+  Meteora -meteor-     961,500   +3,500
 ```
 
 **Lamp — "LIFE4 Clear all 16s over 985k (17E, 965k)"**
@@ -214,15 +264,17 @@ Meteora -meteor-     961,500   ✓         +3,500
 ```
 [ 1 unplayed · 1 must raise · 4/17 exceptions ]
 
-Exceptions: 4 used / 17 allowed
-
+Required — 1 unplayed · 1 must raise
 song                score     to 965k   to 985k   lamp
 Hit Show Heroes     —         unplayed
 Danmaku shinkou     958,200   +6,800    +26,800   Clear → LIFE4 Clear
-Gale Rider          971,400   ✓         +13,600   ✓
-Meteora -meteor-    979,000   ✓         +6,000    Clear → LIFE4 Clear
-TRIP MACHINE        981,650   ✓         +3,350    ✓
-Hou                 990,100   ✓         ✓         Clear → LIFE4 Clear
+
+▸ Exceptions — 4 used / 17 allowed
+  song                score     to 985k   lamp
+  Gale Rider          971,400   +13,600   ✓
+  Meteora -meteor-    979,000   +6,000    Clear → LIFE4 Clear
+  TRIP MACHINE        981,650   +3,350    ✓
+  Hou                 990,100   ✓         Clear → LIFE4 Clear
 ```
 
 **Average — "PFC all 14s with a 999,500 Folder Average (4E, 996k)"**
@@ -230,16 +282,30 @@ Hou                 990,100   ✓         ✓         Clear → LIFE4 Clear
 ```
 [ 2 unplayed · 1 must raise · 3/4 exceptions ]
 
-Exceptions: 3 used / 4 allowed
 Folder average: 999,310 / 999,500
 
+Required — 2 unplayed · 1 must raise
 song       score     to 996k   lamp
 Chart A    —         unplayed
 Chart B    —         unplayed
 Chart C    993,400   +2,600    Great Full Combo → Perfect Full Combo
-Chart E    997,250   ✓         Full Combo → Perfect Full Combo
-Chart D    998,900   ✓         Great Full Combo → Perfect Full Combo
-Chart F    999,120   ✓         Great Full Combo → Perfect Full Combo
+
+▸ Exceptions — 3 used / 4 allowed
+  song       score     lamp
+  Chart E    997,250   Full Combo → Perfect Full Combo
+  Chart D    998,900   Great Full Combo → Perfect Full Combo
+  Chart F    999,120   Great Full Combo → Perfect Full Combo
+```
+
+**No exceptions — "Clear all 16s over 950k"**
+
+```
+[ 1 unplayed · 1 to improve ]
+
+Required — 1 unplayed · 1 to improve
+song       score     to 950k
+u          —         unplayed
+s          900,000   +50,000
 ```
 
 ## Unchanged
@@ -255,7 +321,7 @@ Chart F    999,120   ✓         Great Full Combo → Perfect Full Combo
 | File | Change |
 |---|---|
 | `src/life4/life4/ranks/requirements.py` | `BlockerReport`; `FolderRequirement.blockers` builds it; base default returns an empty one; drop `BLOCKER_COLUMNS`; `_sorted_by_song` sorts by category then song |
-| `src/life4/life4_ui.py` | Button uses `report.label()`; dialog renders `header_lines()` above `rows` |
+| `src/life4/life4_ui.py` | Button uses `report.label()`; dialog renders `header_lines()`, then the Required table, then the Exceptions expander (or its title as a caption when empty) |
 | `tests/test_blockers.py` | Rewritten against the report (see Testing) |
 
 ## Testing
@@ -274,6 +340,12 @@ Unit tests on `BlockerReport` through `FolderRequirement.blockers`, no Streamlit
 - Cells: `✓`, `+gap`, `unplayed` then blanks, `have → required`.
 - Ordering: category first; unplayed alphabetical; played lowest score first, ties by case-insensitive title.
 - Average header line, including `-` when nothing is played.
+- Split: must raise and unplayed in `required_rows`, exceptions in
+  `exception_rows`; a lamp-only failure is an exception; without exceptions
+  every failing chart is required.
+- `exception_rows` has no floor column.
+- Titles: `required_title()` omits zero parts; `exceptions_title()` appends
+  `(N over)` only when over budget; `over_budget` flips at `used > allowed`.
 - `CountRequirement.blockers()` is empty.
 - Existing tests kept: REQUIRED pool, song-title disambiguation, the
   score/`record_on` agreement test in `test_requirements.py`.
