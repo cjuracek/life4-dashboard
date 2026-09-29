@@ -7,19 +7,35 @@ from life4.life4.core import Life4Rank
 from life4.life4.ranks.requirements import BlockerReport, Requirement
 
 
-@st.dialog("Charts below target", width="large")
-def _show_blockers(requirement_label: str, report: BlockerReport) -> None:
-    st.caption(requirement_label)
-    for line in report.header_lines():
-        st.caption(line)
+def _blocker_table(rows) -> None:
     st.dataframe(
-        report.rows,
+        rows,
         hide_index=True,
         width="stretch",
         # "%,d" always groups with commas; "localized" would follow the
         # viewer's browser locale.
         column_config={"score": st.column_config.NumberColumn(format="%,d")},
     )
+
+
+@st.dialog("Charts below target", width="large")
+def _show_blockers(requirement_label: str, report: BlockerReport) -> None:
+    st.caption(requirement_label)
+    for line in report.header_lines():
+        st.caption(line)
+    if not report.required_rows.empty:
+        st.markdown(f"**{report.required_title()}**")
+        _blocker_table(report.required_rows)
+    if not report.exceptions_allowed:
+        return
+    if report.exception_rows.empty:
+        # No table to title, but the budget is still worth seeing.
+        st.caption(report.exceptions_title())
+        return
+    # Under budget nothing in the pool has to change, so it starts closed;
+    # over budget the player has to pick from it, so it opens.
+    with st.expander(report.exceptions_title(), expanded=report.over_budget):
+        _blocker_table(report.exception_rows)
 
 
 class Life4RankDisplay:

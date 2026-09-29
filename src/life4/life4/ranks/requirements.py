@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol
 
 import pandas as pd
@@ -38,8 +38,9 @@ MUST_RAISE = "must raise"
 EXCEPTION = "exception"
 TO_IMPROVE = "to improve"
 
-# Exception and to-improve never occur in the same report, so they share a slot.
-_CATEGORY_ORDER = {UNPLAYED: 0, MUST_RAISE: 1, EXCEPTION: 2, TO_IMPROVE: 2}
+# Must-raise and to-improve never occur in the same report, so they share a
+# slot. Exceptions get a table of their own and never meet the others.
+_CATEGORY_ORDER = {UNPLAYED: 0, MUST_RAISE: 1, TO_IMPROVE: 1, EXCEPTION: 2}
 
 CHECK = "✓"
 
@@ -70,6 +71,10 @@ def _score_gap(score: float, target: int) -> str:
     return CHECK if score >= target else f"+{target - score:,.0f}"
 
 
+def _no_rows() -> pd.DataFrame:
+    return pd.DataFrame(columns=["song", "score"])
+
+
 @dataclass(frozen=True)
 class BlockerReport:
     """Where each chart failing a requirement stands, and the text to show it.
@@ -78,9 +83,15 @@ class BlockerReport:
     work on: when more charts sit above the shadow floor than there are
     exceptions, which ones the allowance forgives is the player's choice, and
     fewest points is not least effort.
+
+    The rows come in two tables because the groups follow different rules.
+    Every required chart (unplayed, must raise, to improve) has to change
+    whatever the budget. The exceptions are a pool: under budget none of
+    them has to change, and over budget the player picks which to raise.
     """
 
-    rows: pd.DataFrame
+    required_rows: pd.DataFrame = field(default_factory=_no_rows)
+    exception_rows: pd.DataFrame = field(default_factory=_no_rows)
     unplayed: int = 0
     must_raise: int = 0
     exceptions_used: int = 0
@@ -91,32 +102,49 @@ class BlockerReport:
 
     @property
     def empty(self) -> bool:
-        return self.rows.empty
+        return self.required_rows.empty and self.exception_rows.empty
+
+    @property
+    def over_budget(self) -> bool:
+        return self.exceptions_used > self.exceptions_allowed
+
+    def _required_parts(self) -> list[tuple[int, str]]:
+        second = (
+            (self.must_raise, f"{self.must_raise} must raise")
+            if self.exceptions_allowed
+            else (self.to_improve, f"{self.to_improve} to improve")
+        )
+        return [(self.unplayed, f"{self.unplayed} unplayed"), second]
+
+    @staticmethod
+    def _joined(parts: list[tuple[int, str]]) -> str:
+        return " · ".join(text for count, text in parts if count)
 
     def label(self) -> str:
+        parts = self._required_parts()
         if self.exceptions_allowed:
-            parts = [
-                (self.unplayed, f"{self.unplayed} unplayed"),
-                (self.must_raise, f"{self.must_raise} must raise"),
+            parts.append(
                 (
                     self.exceptions_used,
                     f"{self.exceptions_used}/{self.exceptions_allowed} exceptions",
-                ),
-            ]
-        else:
-            parts = [
-                (self.unplayed, f"{self.unplayed} unplayed"),
-                (self.to_improve, f"{self.to_improve} to improve"),
-            ]
-        return " · ".join(text for count, text in parts if count)
+                )
+            )
+        return self._joined(parts)
+
+    def required_title(self) -> str:
+        return f"Required — {self._joined(self._required_parts())}"
+
+    def exceptions_title(self) -> str:
+        title = (
+            f"Exceptions — {self.exceptions_used} used / "
+            f"{self.exceptions_allowed} allowed"
+        )
+        if self.over_budget:
+            title += f" ({self.exceptions_used - self.exceptions_allowed} over)"
+        return title
 
     def header_lines(self) -> list[str]:
         lines = []
-        if self.exceptions_allowed:
-            lines.append(
-                f"Exceptions: {self.exceptions_used} used / "
-                f"{self.exceptions_allowed} allowed"
-            )
         if self.average is not None:
             current, target = self.average
             current_str = "-" if current is None else f"{current:,.0f}"
@@ -142,7 +170,7 @@ class Requirement(ABC):
         Empty for count-based requirements ("PFC 5 16s"), which have no
         denominator and therefore no specific chart to name.
         """
-        return BlockerReport(rows=pd.DataFrame(columns=["song", "score"]))
+        return BlockerReport()
 
 
 class ProgressDisplay(Protocol):
@@ -460,9 +488,20 @@ class FolderRequirement(Requirement, ProgressDisplay):
             mean = charts["score"].mean()
             average = (None if pd.isna(mean) else float(mean), self.average_score)
 
+        is_exception = (category == EXCEPTION).to_numpy()
+        exception_rows = rows[is_exception]
+        if self.exceptions and self.exception_floor is not None:
+            # Every exception clears the floor, so its column is all ticks.
+            exception_rows = exception_rows.drop(
+                columns=f"to {format_score(self.exception_floor)}"
+            )
+
         counts = category.value_counts()
         return BlockerReport(
-            rows=_sorted_for_display(rows, category),
+            required_rows=_sorted_for_display(
+                rows[~is_exception], category[~is_exception]
+            ),
+            exception_rows=_sorted_for_display(exception_rows, category[is_exception]),
             unplayed=int(counts.get(UNPLAYED, 0)),
             must_raise=int(counts.get(MUST_RAISE, 0)),
             exceptions_used=int(counts.get(EXCEPTION, 0)),
