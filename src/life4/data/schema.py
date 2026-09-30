@@ -64,7 +64,7 @@ NUMERIC_COLUMNS = ("level", "score", "perfect")
 #: reads, or an untended doubles cell stops an app that never looks at it.
 SINGLES_DIFFICULTIES = ("bSP", "BSP", "DSP", "ESP", "CSP")
 
-#: Difficulty ratings run 1-19. Anything outside that is a bad cell, not a
+#: Levels run 1-19. Anything outside that is a bad cell, not a
 #: chart -- and a NaN level is worse than a wrong one, because it silently
 #: drops the row out of every get_level() bucket instead of landing in the
 #: wrong one.

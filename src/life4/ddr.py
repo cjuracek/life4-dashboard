@@ -122,7 +122,7 @@ class DDRDataset:
                     f"MA point value. MFC_POINT_MAPPING covers levels "
                     f"{min(MFC_POINT_MAPPING)}-{max(MFC_POINT_MAPPING)}, and "
                     f"the sheet is validated to that range at load, so this "
-                    f"means DDR has added a new difficulty tier. Source its "
+                    f"means DDR has added a new level. Source its "
                     f"value from life4ddr.com, then widen both "
                     f"MFC_POINT_MAPPING and LEVEL_RANGE in "
                     f"life4/data/schema.py."

@@ -166,10 +166,10 @@ def test_lamp_count_accepts_better_lamps():
     assert req.is_satisfied(d)
 
 
-def test_higher_diff_counts_charts_at_and_above_the_level():
+def test_or_higher_counts_charts_at_and_above_the_level():
     d = dataset(mfc("a", 11), mfc("b", 14), mfc("c", 9))
     req = CountRequirement(
-        level=11, count=2, clear_type=ClearType.MARVELOUS, higher_diff=True
+        level=11, count=2, clear_type=ClearType.MARVELOUS, or_higher=True
     )
     assert req.is_satisfied(d)
     assert req.get_progress(d) == "2/2"
@@ -177,15 +177,13 @@ def test_higher_diff_counts_charts_at_and_above_the_level():
 
 def test_sdp_count_accepts_an_mfc():
     d = dataset(mfc("a", 13))
-    req = CountRequirement(
-        level=13, count=1, clear_type=ClearType.SDP, higher_diff=True
-    )
+    req = CountRequirement(level=13, count=1, clear_type=ClearType.SDP, or_higher=True)
     assert req.is_satisfied(d)
 
 
-def test_higher_diff_requirements_group_under_other():
+def test_or_higher_requirements_group_under_other():
     assert CountRequirement(
-        level=13, count=1, clear_type=ClearType.SDP, higher_diff=True
+        level=13, count=1, clear_type=ClearType.SDP, or_higher=True
     ).multiple_levels
     assert not CountRequirement(
         level=16, count=8, clear_type=ClearType.PERFECT
@@ -378,9 +376,7 @@ def test_ceiling_is_a_count_of_one():
 
 def test_sdp_count_with_no_sdps_is_unsatisfied_not_a_crash():
     d = dataset(played("a", 16, 900_000))
-    req = CountRequirement(
-        level=13, count=1, clear_type=ClearType.SDP, higher_diff=True
-    )
+    req = CountRequirement(level=13, count=1, clear_type=ClearType.SDP, or_higher=True)
     assert not req.is_satisfied(d)
     assert req.get_progress(d) == "0/1"
 
@@ -388,7 +384,7 @@ def test_sdp_count_with_no_sdps_is_unsatisfied_not_a_crash():
 def test_mfc_count_with_no_mfcs_is_unsatisfied_not_a_crash():
     d = dataset(played("a", 16, 900_000))
     req = CountRequirement(
-        level=13, count=1, clear_type=ClearType.MARVELOUS, higher_diff=True
+        level=13, count=1, clear_type=ClearType.MARVELOUS, or_higher=True
     )
     assert not req.is_satisfied(d)
     assert req.get_progress(d) == "0/1"
@@ -396,7 +392,5 @@ def test_mfc_count_with_no_mfcs_is_unsatisfied_not_a_crash():
 
 def test_sdp_below_the_required_level_does_not_satisfy():
     d = dataset(sdp("a", 12))
-    req = CountRequirement(
-        level=13, count=1, clear_type=ClearType.SDP, higher_diff=True
-    )
+    req = CountRequirement(level=13, count=1, clear_type=ClearType.SDP, or_higher=True)
     assert not req.is_satisfied(d)

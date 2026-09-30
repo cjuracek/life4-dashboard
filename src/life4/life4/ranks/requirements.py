@@ -241,7 +241,7 @@ class CountRequirement(Requirement, ProgressDisplay):
         *,
         clear_type: ClearType | None = None,
         min_score: int | None = None,
-        higher_diff: bool = False,
+        or_higher: bool = False,
         exceptions: int = 0,
         exception_floor: int | None = None,
     ):
@@ -254,12 +254,12 @@ class CountRequirement(Requirement, ProgressDisplay):
         self.count = count
         self.clear_type = clear_type
         self.min_score = min_score
-        self.higher_diff = higher_diff
+        self.or_higher = or_higher
         self.exceptions = exceptions
         self.exception_floor = exception_floor
         # A "d+" goal spans levels, so the UI groups it under "Other" rather
-        # than beneath a single difficulty heading.
-        self.multiple_levels = higher_diff
+        # than beneath a single level heading.
+        self.multiple_levels = or_higher
 
     def __str__(self):
         return count_phrase(
@@ -267,13 +267,13 @@ class CountRequirement(Requirement, ProgressDisplay):
             count=self.count,
             clear_type=self.clear_type,
             min_score=self.min_score,
-            higher_diff=self.higher_diff,
+            or_higher=self.or_higher,
             exceptions=self.exceptions,
             exception_floor=self.exception_floor,
         )
 
     def _charts(self, data: "DDRDataset") -> pd.DataFrame:
-        if self.higher_diff:
+        if self.or_higher:
             return data.get_levels_from(self.level, pool=self.pool)
         return data.get_level(self.level, pool=self.pool)
 
@@ -282,7 +282,7 @@ class CountRequirement(Requirement, ProgressDisplay):
             # SDP is a predicate over perfect counts, not a lamp, so it cannot
             # go through the lamp comparison below.
             sdps = data.get_sdp_or_better(pool=self.pool)
-            if self.higher_diff:
+            if self.or_higher:
                 return int((sdps["level"] >= self.level).sum())
             return int((sdps["level"] == self.level).sum())
 
