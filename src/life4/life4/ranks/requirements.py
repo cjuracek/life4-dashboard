@@ -313,7 +313,7 @@ class CountRequirement(Requirement, ProgressDisplay):
         return f"{self} ({self.get_progress(data)})"
 
 
-class FolderRequirement(Requirement, ProgressDisplay):
+class FolderRequirement(Requirement):
     """Every chart at a level satisfies a predicate, minus exceptions.
 
     Absorbs LampRequirement, FloorRequirement and LampFloorRequirement, and
@@ -403,30 +403,17 @@ class FolderRequirement(Requirement, ProgressDisplay):
                 return False
         return True
 
-    def get_progress(self, data: "DDRDataset") -> str:
-        charts = self._charts(data)
-        total = len(charts)
-        parts = []
-        if self.clear_type is not None:
-            passing = int(self._lamp_ok(charts).sum())
-            if passing < total:
-                parts.append(f"Lamp {passing}/{total}")
-        if self.min_score is not None:
-            passing = int(self._score_ok(charts).sum())
-            if passing < total:
-                parts.append(f"Floor {passing}/{total}")
-        if self.average_score is not None:
-            mean = charts["score"].mean()
-            mean_str = "-" if pd.isna(mean) else f"{mean:,.0f}"
-            parts.append(f"Avg {mean_str}/{self.average_score:,}")
-        if not parts:
-            return f"{total}/{total}"
-        return "; ".join(parts)
-
     def display_str(self, data: "DDRDataset") -> str:
-        if self.is_satisfied(data):
+        # Chart counts live in the blocker dialog, which knows about
+        # exceptions. A short average names no chart, so no dialog opens for
+        # it, and the checkbox text is the only place it can show.
+        if self.average_score is None or self.is_satisfied(data):
             return str(self)
-        return f"{self} ({self.get_progress(data)})"
+        mean = self._charts(data)["score"].mean()
+        if mean >= self.average_score:
+            return str(self)
+        mean_str = "-" if pd.isna(mean) else f"{mean:,.0f}"
+        return f"{self} (Avg {mean_str}/{self.average_score:,})"
 
     def _categories(self, failing: pd.DataFrame) -> pd.Series:
         scored = failing["score"].notna()

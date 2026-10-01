@@ -289,14 +289,31 @@ def test_folder_average_passes_when_the_mean_clears_the_target():
     assert req.is_satisfied(d)
 
 
-def test_folder_average_progress_reports_both_conditions():
+def test_folder_display_str_leaves_chart_counts_to_the_blocker_dialog():
+    d = dataset(pfc("a", 14, 10), played("b", 14, 900_000))
+    req = FolderRequirement(level=14, clear_type=ClearType.PERFECT, min_score=999_000)
+    assert not req.is_satisfied(d)
+    assert req.display_str(d) == str(req)
+
+
+def test_folder_display_str_shows_an_average_below_target():
+    # A short average lists no chart, so no blocker button renders; the
+    # checkbox text is the only place it shows.
     d = dataset(pfc("a", 14, 10), played("b", 14, 900_000))
     req = FolderRequirement(
         level=14, clear_type=ClearType.PERFECT, average_score=999_500
     )
-    progress = req.get_progress(d)
-    assert "Lamp 1/2" in progress
-    assert "Avg" in progress
+    assert req.display_str(d) == f"{req} (Avg 949,950/999,500)"
+
+
+def test_folder_display_str_hides_an_average_that_clears_target():
+    # The lamp fails but the average is met: the blocker dialog has it.
+    d = dataset(pfc("a", 14, 0), played("b", 14, 999_900))
+    req = FolderRequirement(
+        level=14, clear_type=ClearType.PERFECT, average_score=999_500
+    )
+    assert not req.is_satisfied(d)
+    assert req.display_str(d) == str(req)
 
 
 def test_folder_requires_exactly_one_of_floor_or_average():
@@ -343,7 +360,6 @@ def test_folder_agrees_on_unplayed_when_score_present_but_no_record_on():
     req = FolderRequirement(level=16, min_score=950_000)
     assert req.is_satisfied(d)
     assert req.blockers(d).empty
-    assert req.get_progress(d) == "2/2"
 
 
 def test_a_removed_chart_still_credits_a_score_you_earned_on_it():
