@@ -143,7 +143,7 @@ belongs to is a hierarchy fighting its input.
 `multiple_levels` becomes an instance attribute equal to `higher_diff` on
 `CountRequirement` (and `False` on `FolderRequirement`). This preserves
 today's UI behaviour: `SDP a 13+` and `MFC an 11+` group under "Other" rather
-than under a difficulty heading.
+than under a level heading.
 
 ## Exception semantics
 

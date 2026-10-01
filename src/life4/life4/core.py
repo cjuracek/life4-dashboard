@@ -30,13 +30,13 @@ MFC_POINT_MAPPING = {
 }
 
 # "An SDP is worth 1/10 points of an MFC"
-SDP_POINT_MAPPING = {diff: points / 10 for diff, points in MFC_POINT_MAPPING.items()}
+SDP_POINT_MAPPING = {level: points / 10 for level, points in MFC_POINT_MAPPING.items()}
 
 
 class MAPointsUnknownLevel(Exception):
     """An SDP or MFC was earned at a level with no defined MA point value.
 
-    Difficulty ratings top out at 19 today. If DDR ever adds a 20, this fires
+    Levels top out at 19 today. If DDR ever adds a 20, this fires
     rather than silently scoring it as zero.
     """
 

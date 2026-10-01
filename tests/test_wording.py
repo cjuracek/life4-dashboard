@@ -62,13 +62,11 @@ def test_clear_type_counts_use_the_abbreviation():
         count_phrase(level=14, count=60, clear_type=ClearType.PERFECT) == "PFC 60 14s"
     )
     assert (
-        count_phrase(level=13, count=1, clear_type=ClearType.SDP, higher_diff=True)
+        count_phrase(level=13, count=1, clear_type=ClearType.SDP, or_higher=True)
         == "SDP a 13+"
     )
     assert (
-        count_phrase(
-            level=11, count=3, clear_type=ClearType.MARVELOUS, higher_diff=True
-        )
+        count_phrase(level=11, count=3, clear_type=ClearType.MARVELOUS, or_higher=True)
         == "MFC 3 11+s"
     )
 

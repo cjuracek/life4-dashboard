@@ -73,7 +73,7 @@ def _parse_songs(goal: dict) -> Requirement:
             count=goal["song_count"],
             clear_type=clear_type,
             min_score=goal.get("score"),
-            higher_diff=goal.get("higher_diff", False),
+            or_higher=goal.get("higher_diff", False),
             exceptions=exceptions,
             exception_floor=exception_floor,
         )

@@ -600,7 +600,7 @@ class CountRequirement(Requirement):
         self.exceptions = exceptions
         self.exception_floor = exception_floor
         # A "d+" goal spans levels, so the UI groups it under "Other" rather
-        # than beneath a single difficulty heading.
+        # than beneath a single level heading.
         self.multiple_levels = higher_diff
 
     def __str__(self):
@@ -1720,7 +1720,7 @@ Run: `uv run streamlit run app.py`
 Check: the selectbox lists Pearl, Topaz, Amethyst, Emerald; each shows five
 sub-rank columns; an unsatisfied folder requirement still opens its blocker
 dialog; `SDP a 13+` and `MFC an 11+` appear under "Other", not under a
-difficulty heading.
+level heading.
 
 - [ ] **Step 6: Commit**
 

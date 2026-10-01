@@ -1,17 +1,71 @@
+import math
+import re
 from typing import List
 
-import pandas as pd
 import streamlit as st
 
 from life4.ddr import DDRDataset
 from life4.life4.core import Life4Rank
-from life4.life4.ranks.requirements import Requirement
+from life4.life4.ranks.requirements import BlockerReport, Requirement
 
 
-@st.dialog("Charts below target", width="large")
-def _show_blockers(requirement_label: str, blockers: pd.DataFrame) -> None:
-    st.caption(requirement_label)
-    st.dataframe(blockers, hide_index=True, width="stretch")
+def _blocker_table(rows) -> None:
+    st.dataframe(
+        rows,
+        hide_index=True,
+        width="stretch",
+        # "%,d" always groups with commas; "localized" would follow the
+        # viewer's browser locale.
+        column_config={"score": st.column_config.NumberColumn(format="%,d")},
+    )
+
+
+def _title_grid(titles: list[str], n_columns: int = 3) -> None:
+    # A title is the only thing to show for these, so a one-column table
+    # would leave most of the dialog empty and scroll past ten rows. Fill
+    # down then across, so the list still reads alphabetically.
+    per_column = math.ceil(len(titles) / n_columns)
+    for column, start in zip(st.columns(n_columns), range(0, len(titles), per_column)):
+        chunk = titles[start : start + per_column]
+        column.markdown("\n".join(f"- {_escape_markdown(t)}" for t in chunk))
+
+
+def _escape_markdown(text: str) -> str:
+    return re.sub(r"([\\`*_{}\[\]()#+\-.!|~<>$])", r"\\\1", text)
+
+
+def _show_blockers(requirement_label: str, report: BlockerReport) -> None:
+    # The requirement is what the player came to look at, so it takes the
+    # title slot. The decorator only takes a fixed title, so build it here.
+    st.dialog(requirement_label, width="large")(_blocker_dialog)(report)
+
+
+def _section(title: str, *, expanded: bool):
+    # Compact: a bordered expander around a bordered table reads as a box in
+    # a box. Every section uses it, so the three headings match.
+    return st.expander(f"**{title}**", expanded=expanded, type="compact")
+
+
+def _blocker_dialog(report: BlockerReport) -> None:
+    for line in report.header_lines():
+        st.caption(line)
+    if not report.unplayed_rows.empty:
+        # Every one of these has to be played, so they lead, open.
+        with _section(report.unplayed_title(), expanded=True):
+            _title_grid(list(report.unplayed_rows["song"]))
+    if not report.required_rows.empty:
+        with _section(report.required_title(), expanded=True):
+            _blocker_table(report.required_rows)
+    if not report.exceptions_allowed:
+        return
+    if report.exception_rows.empty:
+        # No table to title, but the budget is still worth seeing.
+        st.caption(f"**{report.exceptions_title()}**")
+        return
+    # Under budget nothing in the pool has to change, so it starts closed;
+    # over budget the player has to pick from it, so it opens.
+    with _section(report.exceptions_title(), expanded=report.over_budget):
+        _blocker_table(report.exception_rows)
 
 
 class Life4RankDisplay:
@@ -33,15 +87,14 @@ class Life4RankDisplay:
         if satisfied:
             return
 
-        blockers = requirement.blockers(self.data)
-        if blockers.empty:
+        report = requirement.blockers(self.data)
+        if report.empty:
             return
 
-        unplayed = int(blockers["score"].isna().sum())
-        to_improve = len(blockers) - unplayed
-        label = f"{unplayed} unplayed · {to_improve} to improve"
-        if st.button(label, key=f"{self.life4_rank}|{group}|{requirement}|blockers"):
-            _show_blockers(requirement.display_str(self.data), blockers)
+        if st.button(
+            report.label(), key=f"{self.life4_rank}|{group}|{requirement}|blockers"
+        ):
+            _show_blockers(requirement.display_str(self.data), report)
 
     def _visualize_reqs(self, requirements: List[Requirement], group: str):
         requirement_levels = range(14, 20)

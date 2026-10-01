@@ -725,7 +725,7 @@ The values are known: the LIFE4 table is flat at **25 MFC / 2.5 SDP for level
 16 and above**. This task extends the mapping to 19 and keeps a named exception
 for anything still unmapped.
 
-**MA points are earned at every difficulty, not just 14+.** Measured 2026-08-29:
+**MA points are earned at every level, not just 14+.** Measured 2026-08-29:
 12 MFCs and 81 SDPs sit below level 8, worth **11.22 points** — the difference
 between 31.72 and 20.50, where Emerald I needs 12 and Emerald V needs 20. No
 level filtering anywhere in the pipeline.
@@ -827,7 +827,7 @@ MFC_POINT_MAPPING = {
 class MAPointsUnknownLevel(Exception):
     """An SDP or MFC was earned at a level with no defined MA point value.
 
-    Difficulty ratings top out at 19 today. If DDR ever adds a 20, this fires
+    Levels top out at 19 today. If DDR ever adds a 20, this fires
     rather than silently scoring it as zero.
     """
 ```

@@ -83,7 +83,7 @@ def count_phrase(
     count: int,
     clear_type: ClearType | None = None,
     min_score: int | None = None,
-    higher_diff: bool = False,
+    or_higher: bool = False,
     exceptions: int = 0,
     exception_floor: int | None = None,
 ) -> str:
@@ -104,7 +104,7 @@ def count_phrase(
     else:
         head = "Clear"
 
-    plus = "+" if higher_diff else ""
+    plus = "+" if or_higher else ""
     if count == 1:
         body = f"{article(level)} {level}{plus}"
     else:

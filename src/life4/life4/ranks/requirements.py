@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol
 
 import pandas as pd
@@ -11,6 +12,7 @@ from life4.life4.ranks.wording import (
     ClearType,
     count_phrase,
     folder_phrase,
+    format_score,
 )
 
 if TYPE_CHECKING:
@@ -31,26 +33,127 @@ def _song_labels(charts: pd.DataFrame) -> pd.Series:
     )
 
 
-def _sorted_by_song(blockers: pd.DataFrame) -> pd.DataFrame:
-    """Blockers in alphabetical order by song title, case-insensitively.
+UNPLAYED = "unplayed"
+MUST_RAISE = "must raise"
+EXCEPTION = "exception"
+TO_IMPROVE = "to improve"
 
-    Deliberately NOT ordered by score. The list is read to find a specific
-    song, so alphabetical is what makes it scannable; a score ordering put
-    unplayed charts first and then re-sorted the rest, which reads as the
-    list changing its mind halfway down. Case-insensitive because a plain
-    sort strands lowercase titles after every capitalised one.
+CHECK = "✓"
+
+
+def _sorted_for_display(rows: pd.DataFrame) -> pd.DataFrame:
+    """One section's blockers, worst score first.
+
+    Every chart in a section is measured against the same threshold, so the
+    lowest score is the biggest gap. Ties fall back to the title,
+    case-insensitively, because a plain sort strands lowercase titles after
+    every capitalised one. Unplayed scores are all NaN, so that section
+    sorts by title alone: those charts are looked up by name.
     """
-    return blockers.sort_values(
-        "song", key=lambda song: song.str.casefold()
-    ).reset_index(drop=True)
+    keyed = rows.assign(_song=rows["song"].str.casefold().to_numpy())
+    return (
+        keyed.sort_values(["score", "_song"], kind="stable")
+        .drop(columns="_song")
+        .reset_index(drop=True)
+    )
+
+
+def _score_gap(score: float, target: int) -> str:
+    return CHECK if score >= target else f"+{target - score:,.0f}"
+
+
+def _no_rows() -> pd.DataFrame:
+    return pd.DataFrame(columns=["song", "score"])
+
+
+@dataclass(frozen=True)
+class BlockerReport:
+    """Where each chart failing a requirement stands, and the text to show it.
+
+    States facts only. Nothing here marks a chart as done or as the one to
+    work on: when more charts sit above the shadow floor than there are
+    exceptions, which ones the allowance forgives is the player's choice, and
+    fewest points is not least effort.
+
+    The rows come in three sections because the groups follow different
+    rules. Unplayed charts all have to be played, and a title is all there
+    is to say about them. Required charts (must raise, to improve) all have
+    to change, each by its own gap. The exceptions are a pool: under budget
+    none of them has to change, and over budget the player picks which to
+    raise.
+    """
+
+    unplayed_rows: pd.DataFrame = field(default_factory=_no_rows)
+    required_rows: pd.DataFrame = field(default_factory=_no_rows)
+    exception_rows: pd.DataFrame = field(default_factory=_no_rows)
+    unplayed: int = 0
+    must_raise: int = 0
+    exceptions_used: int = 0
+    exceptions_allowed: int = 0
+    to_improve: int = 0
+    # (mean of played charts, target), for Folder Average requirements.
+    average: tuple[float | None, int] | None = None
+
+    @property
+    def empty(self) -> bool:
+        return (
+            self.unplayed_rows.empty
+            and self.required_rows.empty
+            and self.exception_rows.empty
+        )
+
+    @property
+    def over_budget(self) -> bool:
+        return self.exceptions_used > self.exceptions_allowed
+
+    def _played_part(self) -> tuple[int, str]:
+        if self.exceptions_allowed:
+            return (self.must_raise, f"{self.must_raise} must raise")
+        return (self.to_improve, f"{self.to_improve} to improve")
+
+    @staticmethod
+    def _joined(parts: list[tuple[int, str]]) -> str:
+        return " · ".join(text for count, text in parts if count)
+
+    def label(self) -> str:
+        parts = [(self.unplayed, f"{self.unplayed} unplayed"), self._played_part()]
+        if self.exceptions_allowed:
+            parts.append(
+                (
+                    self.exceptions_used,
+                    f"{self.exceptions_used}/{self.exceptions_allowed} exceptions",
+                )
+            )
+        return self._joined(parts)
+
+    def unplayed_title(self) -> str:
+        noun = "chart" if self.unplayed == 1 else "charts"
+        return f"Unplayed — {self.unplayed} {noun}"
+
+    def required_title(self) -> str:
+        return f"Required — {self._joined([self._played_part()])}"
+
+    def exceptions_title(self) -> str:
+        title = (
+            f"Exceptions — {self.exceptions_used} used / "
+            f"{self.exceptions_allowed} allowed"
+        )
+        if self.over_budget:
+            title += f" ({self.exceptions_used - self.exceptions_allowed} over)"
+        return title
+
+    def header_lines(self) -> list[str]:
+        lines = []
+        if self.average is not None:
+            current, target = self.average
+            current_str = "-" if current is None else f"{current:,.0f}"
+            lines.append(f"Folder average: {current_str} / {target:,}")
+        return lines
 
 
 class Requirement(ABC):
     multiple_levels: bool
     pool: ChartPool = ChartPool.EARNED
-
-    # Columns every blockers() frame returns, so the UI can render them uniformly.
-    BLOCKER_COLUMNS = ("song", "score", "needs")
 
     @abstractmethod
     def is_satisfied(self, data: "DDRDataset"):
@@ -60,19 +163,13 @@ class Requirement(ABC):
     def display_str(self, data: "DDRDataset") -> str:
         pass
 
-    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+    def blockers(self, data: "DDRDataset") -> BlockerReport:
         """Charts standing between this requirement and satisfaction.
 
-        Ordered alphabetically by song -- see _sorted_by_song for why not by
-        score. Empty for count-based requirements ("PFC 5 16s"), which have no
+        Empty for count-based requirements ("PFC 5 16s"), which have no
         denominator and therefore no specific chart to name.
-
-        Charts covered by a requirement's exception allowance are still listed:
-        the frame is every chart below target, not the subset that is strictly
-        blocking. Narrowing it means deciding which of the N below-floor charts
-        the allowance forgives, which no requirement defines today.
         """
-        return pd.DataFrame(columns=list(self.BLOCKER_COLUMNS))
+        return BlockerReport()
 
 
 class ProgressDisplay(Protocol):
@@ -143,7 +240,7 @@ class CountRequirement(Requirement, ProgressDisplay):
         *,
         clear_type: ClearType | None = None,
         min_score: int | None = None,
-        higher_diff: bool = False,
+        or_higher: bool = False,
         exceptions: int = 0,
         exception_floor: int | None = None,
     ):
@@ -156,12 +253,12 @@ class CountRequirement(Requirement, ProgressDisplay):
         self.count = count
         self.clear_type = clear_type
         self.min_score = min_score
-        self.higher_diff = higher_diff
+        self.or_higher = or_higher
         self.exceptions = exceptions
         self.exception_floor = exception_floor
         # A "d+" goal spans levels, so the UI groups it under "Other" rather
-        # than beneath a single difficulty heading.
-        self.multiple_levels = higher_diff
+        # than beneath a single level heading.
+        self.multiple_levels = or_higher
 
     def __str__(self):
         return count_phrase(
@@ -169,13 +266,13 @@ class CountRequirement(Requirement, ProgressDisplay):
             count=self.count,
             clear_type=self.clear_type,
             min_score=self.min_score,
-            higher_diff=self.higher_diff,
+            or_higher=self.or_higher,
             exceptions=self.exceptions,
             exception_floor=self.exception_floor,
         )
 
     def _charts(self, data: "DDRDataset") -> pd.DataFrame:
-        if self.higher_diff:
+        if self.or_higher:
             return data.get_levels_from(self.level, pool=self.pool)
         return data.get_level(self.level, pool=self.pool)
 
@@ -184,7 +281,7 @@ class CountRequirement(Requirement, ProgressDisplay):
             # SDP is a predicate over perfect counts, not a lamp, so it cannot
             # go through the lamp comparison below.
             sdps = data.get_sdp_or_better(pool=self.pool)
-            if self.higher_diff:
+            if self.or_higher:
                 return int((sdps["level"] >= self.level).sum())
             return int((sdps["level"] == self.level).sum())
 
@@ -215,7 +312,7 @@ class CountRequirement(Requirement, ProgressDisplay):
         return f"{self} ({self.get_progress(data)})"
 
 
-class FolderRequirement(Requirement, ProgressDisplay):
+class FolderRequirement(Requirement):
     """Every chart at a level satisfies a predicate, minus exceptions.
 
     Absorbs LampRequirement, FloorRequirement and LampFloorRequirement, and
@@ -305,49 +402,94 @@ class FolderRequirement(Requirement, ProgressDisplay):
                 return False
         return True
 
-    def get_progress(self, data: "DDRDataset") -> str:
-        charts = self._charts(data)
-        total = len(charts)
-        parts = []
-        if self.clear_type is not None:
-            passing = int(self._lamp_ok(charts).sum())
-            if passing < total:
-                parts.append(f"Lamp {passing}/{total}")
-        if self.min_score is not None:
-            passing = int(self._score_ok(charts).sum())
-            if passing < total:
-                parts.append(f"Floor {passing}/{total}")
-        if self.average_score is not None:
-            mean = charts["score"].mean()
-            mean_str = "-" if pd.isna(mean) else f"{mean:,.0f}"
-            parts.append(f"Avg {mean_str}/{self.average_score:,}")
-        if not parts:
-            return f"{total}/{total}"
-        return "; ".join(parts)
-
     def display_str(self, data: "DDRDataset") -> str:
-        if self.is_satisfied(data):
+        # Chart counts live in the blocker dialog, which knows about
+        # exceptions. A short average names no chart, so no dialog opens for
+        # it, and the checkbox text is the only place it can show.
+        if self.average_score is None or self.is_satisfied(data):
             return str(self)
-        return f"{self} ({self.get_progress(data)})"
+        mean = self._charts(data)["score"].mean()
+        if mean >= self.average_score:
+            return str(self)
+        mean_str = "-" if pd.isna(mean) else f"{mean:,.0f}"
+        return f"{self} (Avg {mean_str}/{self.average_score:,})"
 
-    def blockers(self, data: "DDRDataset") -> pd.DataFrame:
+    def _categories(self, failing: pd.DataFrame) -> pd.Series:
+        scored = failing["score"].notna()
+        category = pd.Series(UNPLAYED, index=failing.index, dtype=object)
+        if not self.exceptions:
+            category[scored] = TO_IMPROVE
+            return category
+        # An exception is excused from the clear type, so only score decides.
+        qualifies = scored
+        if self.exception_floor is not None:
+            qualifies = scored & (failing["score"] >= self.exception_floor)
+        category[qualifies] = EXCEPTION
+        category[scored & ~qualifies] = MUST_RAISE
+        return category
+
+    def _gap_columns(self) -> list[str]:
+        columns = []
+        if self.exceptions and self.exception_floor is not None:
+            columns.append(f"to {format_score(self.exception_floor)}")
+        if self.min_score is not None:
+            columns.append(f"to {format_score(self.min_score)}")
+        if self.clear_type is not None:
+            columns.append("lamp")
+        return columns
+
+    def _gap_cells(self, row: pd.Series) -> list[str]:
+        cells = []
+        if self.exceptions and self.exception_floor is not None:
+            cells.append(_score_gap(row["score"], self.exception_floor))
+        if self.min_score is not None:
+            cells.append(_score_gap(row["score"], self.min_score))
+        if self.clear_type is not None:
+            required = LAMP_FOR_CLEAR_TYPE[self.clear_type]
+            if row["lamp"] >= required:
+                cells.append(CHECK)
+            else:
+                have = LAMP_LABELS[Lamp(row["lamp"])]
+                cells.append(f"{have} → {LAMP_LABELS[required]}")
+        return cells
+
+    def blockers(self, data: "DDRDataset") -> BlockerReport:
         charts = self._charts(data).copy()
         charts["song"] = _song_labels(charts)
         failing = self._failing(charts)
+        category = self._categories(failing)
 
-        needs = []
-        for _, row in failing.iterrows():
-            if pd.isna(row["score"]):
-                needs.append("unplayed")
-            elif self.min_score is not None and row["score"] < self.min_score:
-                # The score gap is the actionable number, so it wins when a
-                # chart fails both conditions.
-                needs.append(f"+{self.min_score - row['score']:,.0f}")
-            else:
-                required = LAMP_FOR_CLEAR_TYPE[self.clear_type]
-                have = LAMP_LABELS[Lamp(row["lamp"])]
-                needs.append(f"{have} → {LAMP_LABELS[required]}")
+        is_unplayed = (category == UNPLAYED).to_numpy()
+        unplayed_rows = _sorted_for_display(failing.loc[is_unplayed, ["song", "score"]])
+        played, category = failing[~is_unplayed], category[~is_unplayed]
 
-        out = failing[["song", "score"]].copy()
-        out["needs"] = needs
-        return _sorted_by_song(out[list(self.BLOCKER_COLUMNS)])
+        cells = [self._gap_cells(row) for _, row in played.iterrows()]
+        rows = played[["song", "score"]].copy()
+        for i, name in enumerate(self._gap_columns()):
+            rows[name] = [chart_cells[i] for chart_cells in cells]
+
+        average = None
+        if self.average_score is not None:
+            mean = charts["score"].mean()
+            average = (None if pd.isna(mean) else float(mean), self.average_score)
+
+        is_exception = (category == EXCEPTION).to_numpy()
+        exception_rows = rows[is_exception]
+        if self.exceptions and self.exception_floor is not None:
+            # Every exception clears the floor, so its column is all ticks.
+            exception_rows = exception_rows.drop(
+                columns=f"to {format_score(self.exception_floor)}"
+            )
+
+        counts = category.value_counts()
+        return BlockerReport(
+            unplayed_rows=unplayed_rows[["song"]],
+            required_rows=_sorted_for_display(rows[~is_exception]),
+            exception_rows=_sorted_for_display(exception_rows),
+            unplayed=int(is_unplayed.sum()),
+            must_raise=int(counts.get(MUST_RAISE, 0)),
+            exceptions_used=int(counts.get(EXCEPTION, 0)),
+            exceptions_allowed=self.exceptions,
+            to_improve=int(counts.get(TO_IMPROVE, 0)),
+            average=average,
+        )
