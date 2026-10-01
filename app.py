@@ -57,7 +57,9 @@ def main() -> None:
         st.image("assets/life4-logo.png", width="stretch")
 
     names = tuple(tier.name for tier in IN_SCOPE)
-    rank_choice = st.selectbox("Select rank", names, index=len(names) - 1)
+    rank_choice = st.selectbox(
+        "Select rank", names, index=names.index(Life4RankEnum.Amethyst.name)
+    )
     subranks = load_ranks()[Life4RankEnum[rank_choice]]
 
     for sub_rank, column in zip(subranks, st.columns(5)):
