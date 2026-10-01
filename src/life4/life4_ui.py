@@ -34,27 +34,37 @@ def _escape_markdown(text: str) -> str:
     return re.sub(r"([\\`*_{}\[\]()#+\-.!|~<>$])", r"\\\1", text)
 
 
-@st.dialog("Charts below target", width="large")
 def _show_blockers(requirement_label: str, report: BlockerReport) -> None:
-    st.caption(requirement_label)
+    # The requirement is what the player came to look at, so it takes the
+    # title slot. The decorator only takes a fixed title, so build it here.
+    st.dialog(requirement_label, width="large")(_blocker_dialog)(report)
+
+
+def _section(title: str, *, expanded: bool):
+    # Compact: a bordered expander around a bordered table reads as a box in
+    # a box. Every section uses it, so the three headings match.
+    return st.expander(f"**{title}**", expanded=expanded, type="compact")
+
+
+def _blocker_dialog(report: BlockerReport) -> None:
     for line in report.header_lines():
         st.caption(line)
     if not report.unplayed_rows.empty:
         # Every one of these has to be played, so they lead, open.
-        with st.expander(report.unplayed_title(), expanded=True):
+        with _section(report.unplayed_title(), expanded=True):
             _title_grid(list(report.unplayed_rows["song"]))
     if not report.required_rows.empty:
-        st.markdown(f"**{report.required_title()}**")
-        _blocker_table(report.required_rows)
+        with _section(report.required_title(), expanded=True):
+            _blocker_table(report.required_rows)
     if not report.exceptions_allowed:
         return
     if report.exception_rows.empty:
         # No table to title, but the budget is still worth seeing.
-        st.caption(report.exceptions_title())
+        st.caption(f"**{report.exceptions_title()}**")
         return
     # Under budget nothing in the pool has to change, so it starts closed;
     # over budget the player has to pick from it, so it opens.
-    with st.expander(report.exceptions_title(), expanded=report.over_budget):
+    with _section(report.exceptions_title(), expanded=report.over_budget):
         _blocker_table(report.exception_rows)
 
 
