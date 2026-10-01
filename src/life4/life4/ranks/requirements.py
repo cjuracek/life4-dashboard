@@ -38,31 +38,22 @@ MUST_RAISE = "must raise"
 EXCEPTION = "exception"
 TO_IMPROVE = "to improve"
 
-# Must-raise and to-improve never occur in the same report, so they share a
-# slot. Exceptions get a table of their own and never meet the others.
-_CATEGORY_ORDER = {UNPLAYED: 0, MUST_RAISE: 1, TO_IMPROVE: 1, EXCEPTION: 2}
-
 CHECK = "✓"
 
 
-def _sorted_for_display(rows: pd.DataFrame, category: pd.Series) -> pd.DataFrame:
-    """Blockers grouped by category; within each, worst score first.
+def _sorted_for_display(rows: pd.DataFrame) -> pd.DataFrame:
+    """One section's blockers, worst score first.
 
-    Unplayed charts have no score and are looked up by name, so they sort
-    alphabetically. Played charts sort lowest score first: every chart in a
-    category is measured against the same threshold, so the lowest score is
-    the biggest gap. Ties fall back to the title, case-insensitively,
-    because a plain sort strands lowercase titles after every capitalised
-    one.
+    Every chart in a section is measured against the same threshold, so the
+    lowest score is the biggest gap. Ties fall back to the title,
+    case-insensitively, because a plain sort strands lowercase titles after
+    every capitalised one. Unplayed scores are all NaN, so that section
+    sorts by title alone: those charts are looked up by name.
     """
-    keyed = rows.assign(
-        _order=category.map(_CATEGORY_ORDER).to_numpy(),
-        _song=rows["song"].str.casefold().to_numpy(),
-    )
-    # Unplayed scores are all NaN, so within that group only _song decides.
+    keyed = rows.assign(_song=rows["song"].str.casefold().to_numpy())
     return (
-        keyed.sort_values(["_order", "score", "_song"], kind="stable")
-        .drop(columns=["_order", "_song"])
+        keyed.sort_values(["score", "_song"], kind="stable")
+        .drop(columns="_song")
         .reset_index(drop=True)
     )
 
@@ -84,12 +75,15 @@ class BlockerReport:
     exceptions, which ones the allowance forgives is the player's choice, and
     fewest points is not least effort.
 
-    The rows come in two tables because the groups follow different rules.
-    Every required chart (unplayed, must raise, to improve) has to change
-    whatever the budget. The exceptions are a pool: under budget none of
-    them has to change, and over budget the player picks which to raise.
+    The rows come in three sections because the groups follow different
+    rules. Unplayed charts all have to be played, and a title is all there
+    is to say about them. Required charts (must raise, to improve) all have
+    to change, each by its own gap. The exceptions are a pool: under budget
+    none of them has to change, and over budget the player picks which to
+    raise.
     """
 
+    unplayed_rows: pd.DataFrame = field(default_factory=_no_rows)
     required_rows: pd.DataFrame = field(default_factory=_no_rows)
     exception_rows: pd.DataFrame = field(default_factory=_no_rows)
     unplayed: int = 0
@@ -102,26 +96,27 @@ class BlockerReport:
 
     @property
     def empty(self) -> bool:
-        return self.required_rows.empty and self.exception_rows.empty
+        return (
+            self.unplayed_rows.empty
+            and self.required_rows.empty
+            and self.exception_rows.empty
+        )
 
     @property
     def over_budget(self) -> bool:
         return self.exceptions_used > self.exceptions_allowed
 
-    def _required_parts(self) -> list[tuple[int, str]]:
-        second = (
-            (self.must_raise, f"{self.must_raise} must raise")
-            if self.exceptions_allowed
-            else (self.to_improve, f"{self.to_improve} to improve")
-        )
-        return [(self.unplayed, f"{self.unplayed} unplayed"), second]
+    def _played_part(self) -> tuple[int, str]:
+        if self.exceptions_allowed:
+            return (self.must_raise, f"{self.must_raise} must raise")
+        return (self.to_improve, f"{self.to_improve} to improve")
 
     @staticmethod
     def _joined(parts: list[tuple[int, str]]) -> str:
         return " · ".join(text for count, text in parts if count)
 
     def label(self) -> str:
-        parts = self._required_parts()
+        parts = [(self.unplayed, f"{self.unplayed} unplayed"), self._played_part()]
         if self.exceptions_allowed:
             parts.append(
                 (
@@ -131,8 +126,12 @@ class BlockerReport:
             )
         return self._joined(parts)
 
+    def unplayed_title(self) -> str:
+        noun = "chart" if self.unplayed == 1 else "charts"
+        return f"Unplayed — {self.unplayed} {noun}"
+
     def required_title(self) -> str:
-        return f"Required — {self._joined(self._required_parts())}"
+        return f"Required — {self._joined([self._played_part()])}"
 
     def exceptions_title(self) -> str:
         title = (
@@ -460,14 +459,13 @@ class FolderRequirement(Requirement):
         failing = self._failing(charts)
         category = self._categories(failing)
 
-        columns = self._gap_columns()
-        unplayed_cells = [UNPLAYED] + [""] * (len(columns) - 1) if columns else []
-        cells = [
-            unplayed_cells if cat == UNPLAYED else self._gap_cells(row)
-            for (_, row), cat in zip(failing.iterrows(), category)
-        ]
-        rows = failing[["song", "score"]].copy()
-        for i, name in enumerate(columns):
+        is_unplayed = (category == UNPLAYED).to_numpy()
+        unplayed_rows = _sorted_for_display(failing.loc[is_unplayed, ["song", "score"]])
+        played, category = failing[~is_unplayed], category[~is_unplayed]
+
+        cells = [self._gap_cells(row) for _, row in played.iterrows()]
+        rows = played[["song", "score"]].copy()
+        for i, name in enumerate(self._gap_columns()):
             rows[name] = [chart_cells[i] for chart_cells in cells]
 
         average = None
@@ -485,11 +483,10 @@ class FolderRequirement(Requirement):
 
         counts = category.value_counts()
         return BlockerReport(
-            required_rows=_sorted_for_display(
-                rows[~is_exception], category[~is_exception]
-            ),
-            exception_rows=_sorted_for_display(exception_rows, category[is_exception]),
-            unplayed=int(counts.get(UNPLAYED, 0)),
+            unplayed_rows=unplayed_rows[["song"]],
+            required_rows=_sorted_for_display(rows[~is_exception]),
+            exception_rows=_sorted_for_display(exception_rows),
+            unplayed=int(is_unplayed.sum()),
             must_raise=int(counts.get(MUST_RAISE, 0)),
             exceptions_used=int(counts.get(EXCEPTION, 0)),
             exceptions_allowed=self.exceptions,

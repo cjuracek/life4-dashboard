@@ -1,3 +1,5 @@
+import math
+import re
 from typing import List
 
 import streamlit as st
@@ -18,11 +20,29 @@ def _blocker_table(rows) -> None:
     )
 
 
+def _title_grid(titles: list[str], n_columns: int = 3) -> None:
+    # A title is the only thing to show for these, so a one-column table
+    # would leave most of the dialog empty and scroll past ten rows. Fill
+    # down then across, so the list still reads alphabetically.
+    per_column = math.ceil(len(titles) / n_columns)
+    for column, start in zip(st.columns(n_columns), range(0, len(titles), per_column)):
+        chunk = titles[start : start + per_column]
+        column.markdown("\n".join(f"- {_escape_markdown(t)}" for t in chunk))
+
+
+def _escape_markdown(text: str) -> str:
+    return re.sub(r"([\\`*_{}\[\]()#+\-.!|~<>$])", r"\\\1", text)
+
+
 @st.dialog("Charts below target", width="large")
 def _show_blockers(requirement_label: str, report: BlockerReport) -> None:
     st.caption(requirement_label)
     for line in report.header_lines():
         st.caption(line)
+    if not report.unplayed_rows.empty:
+        # Every one of these has to be played, so they lead, open.
+        with st.expander(report.unplayed_title(), expanded=True):
+            _title_grid(list(report.unplayed_rows["song"]))
     if not report.required_rows.empty:
         st.markdown(f"**{report.required_title()}**")
         _blocker_table(report.required_rows)

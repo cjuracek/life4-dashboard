@@ -21,7 +21,7 @@ def test_blockers_sort_case_insensitively():
         chart(title="Arcadia", level=16),
     )
     blockers = FolderRequirement(level=16, min_score=950_000).blockers(data)
-    assert list(blockers.required_rows["song"]) == ["Arcadia", "fluctus", "THE SAFARI"]
+    assert list(blockers.unplayed_rows["song"]) == ["Arcadia", "fluctus", "THE SAFARI"]
 
 
 def test_blockers_are_empty_when_every_chart_clears_the_floor():
@@ -76,7 +76,7 @@ def test_folder_requirement_str_matches_life4_wording():
 def test_unique_title_at_a_level_renders_bare_with_no_parenthetical():
     data = dataset(chart(title="Ace out", level=14, diff="CSP"))
     blockers = FolderRequirement(level=14, min_score=950_000).blockers(data)
-    assert list(blockers.required_rows["song"]) == ["Ace out"]
+    assert list(blockers.unplayed_rows["song"]) == ["Ace out"]
 
 
 def test_title_appearing_twice_at_a_level_suffixes_each_with_its_own_difficulty():
@@ -85,7 +85,7 @@ def test_title_appearing_twice_at_a_level_suffixes_each_with_its_own_difficulty(
         chart(title="Ace out", level=14, diff="ESP"),
     )
     blockers = FolderRequirement(level=14, min_score=950_000).blockers(data)
-    assert set(blockers.required_rows["song"]) == {"Ace out (CSP)", "Ace out (ESP)"}
+    assert set(blockers.unplayed_rows["song"]) == {"Ace out (CSP)", "Ace out (ESP)"}
 
 
 def test_three_way_collision_suffixes_all_three():
@@ -95,7 +95,7 @@ def test_three_way_collision_suffixes_all_three():
         chart(title="collider", level=11, diff="ESP"),
     )
     blockers = FolderRequirement(level=11, min_score=950_000).blockers(data)
-    assert set(blockers.required_rows["song"]) == {
+    assert set(blockers.unplayed_rows["song"]) == {
         "collider (CSP)",
         "collider (DSP)",
         "collider (ESP)",
@@ -132,15 +132,18 @@ def test_header_lines_show_folder_average():
     assert r.header_lines() == ["Folder average: 999,310 / 999,500"]
 
 
-def test_required_title_names_only_the_required_categories():
+def test_required_title_counts_only_the_played_charts_in_its_table():
+    # Unplayed charts have a section of their own, with its own count.
     r = report(unplayed=1, must_raise=3, exceptions_used=4, exceptions_allowed=12)
-    assert r.required_title() == "Required — 1 unplayed · 3 must raise"
-    assert report(must_raise=2, exceptions_allowed=3).required_title() == (
-        "Required — 2 must raise"
-    )
+    assert r.required_title() == "Required — 3 must raise"
     assert report(unplayed=1, to_improve=2).required_title() == (
-        "Required — 1 unplayed · 2 to improve"
+        "Required — 2 to improve"
     )
+
+
+def test_unplayed_title_counts_the_charts():
+    assert report(unplayed=1).unplayed_title() == "Unplayed — 1 chart"
+    assert report(unplayed=23).unplayed_title() == "Unplayed — 23 charts"
 
 
 def test_exceptions_title_shows_the_budget_and_any_overrun():
@@ -170,6 +173,11 @@ def test_report_is_empty_when_it_has_no_rows():
     assert report().empty
 
 
+def test_unplayed_charts_alone_make_a_report_non_empty():
+    data = dataset(chart(title="u", level=16))
+    assert not FolderRequirement(level=16, min_score=950_000).blockers(data).empty
+
+
 def sixteens(**kwargs):
     return FolderRequirement(level=16, min_score=965_000, **kwargs)
 
@@ -188,12 +196,13 @@ def test_charts_within_the_exception_allowance_are_not_to_improve():
     )
     report = sixteens(exceptions=22, exception_floor=930_000).blockers(data)
     assert report.label() == "4 unplayed · 2/22 exceptions"
-    assert list(report.required_rows["song"]) == [
+    assert list(report.unplayed_rows["song"]) == [
         "Danmaku shinkou",
         "Gale Rider",
         "Hit Show Heroes",
         "Meteora -meteor-",
     ]
+    assert report.required_rows.empty
     # Every exception is over the floor, so the floor column is left out.
     assert report.exception_rows.to_dict("records") == [
         {"song": "Hou", "score": 952_610, "to 965k": "+12,390"},
@@ -219,8 +228,9 @@ def test_over_budget_counts_only_qualifying_charts_as_exceptions():
     report = sixteens(exceptions=3, exception_floor=930_000).blockers(data)
     assert report.label() == "1 unplayed · 1 must raise · 4/3 exceptions"
     assert report.over_budget
-    assert list(report.required_rows["song"]) == ["Hit Show Heroes", "Danmaku shinkou"]
-    danmaku = report.required_rows.iloc[1]
+    assert list(report.unplayed_rows["song"]) == ["Hit Show Heroes"]
+    assert list(report.required_rows["song"]) == ["Danmaku shinkou"]
+    danmaku = report.required_rows.iloc[0]
     assert (danmaku["to 930k"], danmaku["to 965k"]) == ("+8,700", "+43,700")
     assert len(report.exception_rows) == 4
 
@@ -259,7 +269,8 @@ def test_a_met_lamp_reads_as_a_check():
     assert req.blockers(data).exception_rows.loc[0, "lamp"] == "✓"
 
 
-def test_an_unplayed_chart_fills_only_the_first_gap_column():
+def test_an_unplayed_chart_is_listed_by_name_alone():
+    # No score, no lamp, every target missed: only the title says anything.
     data = dataset(chart(title="unplayed", level=16))
     req = FolderRequirement(
         level=16,
@@ -268,8 +279,9 @@ def test_an_unplayed_chart_fills_only_the_first_gap_column():
         exceptions=17,
         exception_floor=965_000,
     )
-    row = req.blockers(data).required_rows.iloc[0]
-    assert (row["to 965k"], row["to 985k"], row["lamp"]) == ("unplayed", "", "")
+    report = req.blockers(data)
+    assert report.unplayed_rows.to_dict("records") == [{"song": "unplayed"}]
+    assert report.required_rows.empty
 
 
 def test_a_scored_chart_with_no_record_on_is_played_not_unplayed():
@@ -339,8 +351,8 @@ def test_an_average_only_failure_has_no_rows():
 
 
 def test_unplayed_sort_alphabetically_and_played_sort_worst_score_first():
-    # Unplayed charts are looked up by name. Played charts within a category
-    # lead with the lowest score -- the biggest gap -- so the worst sit on top.
+    # Unplayed charts are looked up by name. Played charts lead with the
+    # lowest score -- the biggest gap -- so the worst sit on top.
     data = dataset(
         played("apple", 16, 950_000),
         played("Banana", 16, 920_000),
@@ -350,12 +362,8 @@ def test_unplayed_sort_alphabetically_and_played_sort_worst_score_first():
         played("blueberry", 16, 940_000),
     )
     report = sixteens(exceptions=3, exception_floor=930_000).blockers(data)
-    assert list(report.required_rows["song"]) == [
-        "Apricot",
-        "cherry",
-        "Banana",
-        "avocado",
-    ]
+    assert list(report.unplayed_rows["song"]) == ["Apricot", "cherry"]
+    assert list(report.required_rows["song"]) == ["Banana", "avocado"]
     assert list(report.exception_rows["song"]) == ["blueberry", "apple"]
 
 
@@ -371,13 +379,13 @@ def test_equal_scores_fall_back_to_case_insensitive_title():
     assert list(report.exception_rows["song"]) == ["Alpha", "beta"]
 
 
-def test_disambiguated_titles_survive_the_category_sort():
+def test_disambiguated_titles_survive_the_split_into_sections():
     # Review focus 4: two charts of one song at one level, in different
-    # categories, still carry their own difficulty.
+    # sections, still carry their own difficulty.
     data = dataset(
         chart(title="Ace out", level=16, diff="CSP"),
         played("Ace out", 16, 950_000, diff="ESP"),
     )
     report = sixteens(exceptions=3, exception_floor=930_000).blockers(data)
-    assert list(report.required_rows["song"]) == ["Ace out (CSP)"]
+    assert list(report.unplayed_rows["song"]) == ["Ace out (CSP)"]
     assert list(report.exception_rows["song"]) == ["Ace out (ESP)"]
