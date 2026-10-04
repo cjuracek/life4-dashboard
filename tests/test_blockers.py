@@ -317,7 +317,7 @@ def test_a_chart_over_target_missing_only_the_lamp_is_an_exception():
             "song": "Hou",
             "score": 990_100,
             "to 985k": "✓",
-            "lamp": "Clear → LIFE4 Clear*",
+            "to LIFE4 Clear*": "Clear",
         }
     ]
 
@@ -331,7 +331,7 @@ def test_a_met_lamp_reads_as_a_check():
         exceptions=17,
         exception_floor=965_000,
     )
-    assert req.blockers(data).exception_rows.loc[0, "lamp"] == "✓"
+    assert req.blockers(data).exception_rows.loc[0, "to LIFE4 Clear*"] == "✓"
 
 
 def test_an_unplayed_chart_is_listed_by_name_alone():
@@ -372,7 +372,7 @@ def test_without_exceptions_a_lamp_only_failure_is_required():
     req = FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=950_000)
     report = req.blockers(data)
     assert report.required_rows.to_dict("records") == [
-        {"song": "s", "score": 990_000, "to 950k": "✓", "lamp": "Clear → LIFE4 Clear*"}
+        {"song": "s", "score": 990_000, "to 950k": "✓", "to LIFE4 Clear*": "Clear"}
     ]
     assert report.exception_rows.empty
 
@@ -391,13 +391,14 @@ def test_folder_average_columns_and_header():
         exception_floor=996_000,
     )
     report = req.blockers(data)
-    assert list(report.required_rows.columns) == ["song", "score", "to 996k", "lamp"]
-    assert list(report.exception_rows.columns) == ["song", "score", "lamp"]
+    # Like "to 996k", the lamp column names the target and each cell shows
+    # where the chart stands.
+    target = "to Perfect Full Combo"
+    assert list(report.required_rows.columns) == ["song", "score", "to 996k", target]
+    assert list(report.exception_rows.columns) == ["song", "score", target]
     assert report.label() == "1 must raise · 1/4 exceptions"
     assert report.header_lines() == ["Folder average: 997,400 / 999,500"]
-    assert report.required_rows.loc[0, "lamp"] == (
-        "Great Full Combo → Perfect Full Combo"
-    )
+    assert report.required_rows.loc[0, target] == ("Great Full Combo")
 
 
 def test_an_average_only_failure_has_no_rows():
@@ -456,24 +457,27 @@ def test_disambiguated_titles_survive_the_split_into_sections():
     assert list(report.exception_rows["song"]) == ["Ace out (ESP)"]
 
 
+LIFE4 = "to LIFE4 Clear*"
+
+
 def _life4_sixteens():
     return FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=985_000)
 
 
 def test_a_flare_8_meets_the_lamp():
     data = dataset(played("viii", 16, 980_000, flare=8))
-    assert _life4_sixteens().blockers(data).required_rows.loc[0, "lamp"] == "✓"
+    assert _life4_sixteens().blockers(data).required_rows.loc[0, LIFE4] == "✓"
 
 
 def test_a_flare_below_8_still_needs_the_lamp():
     data = dataset(played("vii", 16, 980_000, flare=7))
-    assert _life4_sixteens().blockers(data).required_rows.loc[0, "lamp"] == (
-        "Clear → LIFE4 Clear*"
-    )
+    assert _life4_sixteens().blockers(data).required_rows.loc[0, LIFE4] == "Clear"
 
 
 def test_the_lamp_column_explains_the_mark_only_where_flares_count():
     data = dataset(played("s", 16, 980_000))
-    assert _life4_sixteens().blockers(data).lamp_note == "* Flare 8+ also counts"
+    assert _life4_sixteens().blockers(data).column_notes == {
+        LIFE4: "* Flare 8+ also counts"
+    }
     pfc = FolderRequirement(level=16, clear_type=ClearType.PERFECT, min_score=985_000)
-    assert pfc.blockers(data).lamp_note is None
+    assert pfc.blockers(data).column_notes == {}

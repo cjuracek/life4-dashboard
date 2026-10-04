@@ -36,21 +36,26 @@ def _column_widths(rows) -> dict[str, int]:
     return widths
 
 
-def _blocker_table(rows, lamp_note: str | None) -> None:
+def _header(name: str) -> str:
+    # Capitalize the first letter only: "to LIFE4 Clear*" -> "To LIFE4 Clear*".
+    return name[:1].upper() + name[1:]
+
+
+def _blocker_table(rows, column_notes: dict[str, str]) -> None:
     widths = _column_widths(rows)
     column_config = {
-        name: st.column_config.Column(width=width) for name, width in widths.items()
-    }
-    if "lamp" in widths and lamp_note:
-        # Explains the * on "LIFE4 Clear*". Tooltips are Markdown, where a
-        # leading "* " would turn the note into a bullet.
-        column_config["lamp"] = st.column_config.Column(
-            width=widths["lamp"], help=_escape_markdown(lamp_note)
+        name: st.column_config.Column(
+            _header(name),
+            width=width,
+            # Tooltips are Markdown, where a leading "* " becomes a bullet.
+            help=_escape_markdown(column_notes[name]) if name in column_notes else None,
         )
+        for name, width in widths.items()
+    }
     # "%,d" always groups with commas; "localized" would follow the viewer's
     # browser locale.
     column_config["score"] = st.column_config.NumberColumn(
-        format="%,d", width=widths["score"]
+        _header("score"), format="%,d", width=widths["score"]
     )
     st.dataframe(
         rows,
@@ -112,7 +117,7 @@ def _blocker_dialog(report: BlockerReport) -> None:
             _title_grid(list(report.unplayed_rows["song"]))
     if not report.required_rows.empty:
         with _section(report.required_title(), expanded=True):
-            _blocker_table(report.required_rows, report.lamp_note)
+            _blocker_table(report.required_rows, report.column_notes)
     if not report.exceptions_allowed:
         return
     if report.exception_rows.empty:
@@ -122,7 +127,7 @@ def _blocker_dialog(report: BlockerReport) -> None:
     # Under budget nothing in the pool has to change, so it starts closed;
     # over budget the player has to pick from it, so it opens.
     with _section(report.exceptions_title(), expanded=report.over_budget):
-        _blocker_table(report.exception_rows, report.lamp_note)
+        _blocker_table(report.exception_rows, report.column_notes)
 
 
 class Life4RankDisplay:

@@ -107,10 +107,15 @@ def _meets_clear_type(charts, clear_type: ClearType):
     return meets
 
 
-def _clear_type_target(clear_type: ClearType) -> str:
-    """The lamp a blocker cell asks for, marked where a flare would also do."""
+def _lamp_column(clear_type: ClearType) -> str:
+    """The blocker table's lamp column, named for its target like "to 987k".
+
+    Marked where a flare would also do, so the mark appears once in the
+    header rather than on every row.
+    """
     label = LAMP_LABELS[LAMP_FOR_CLEAR_TYPE[clear_type]]
-    return label + FLARE_MARK if clear_type is ClearType.LIFE4 else label
+    mark = FLARE_MARK if clear_type is ClearType.LIFE4 else ""
+    return f"to {label}{mark}"
 
 
 def _sorted_for_display(rows: pd.DataFrame) -> pd.DataFrame:
@@ -165,8 +170,8 @@ class BlockerReport:
     to_improve: int = 0
     # (mean of played charts, target), for Folder Average requirements.
     average: tuple[float | None, int] | None = None
-    # Tooltip for the lamp column, where its target carries the flare mark.
-    lamp_note: str | None = None
+    # Header tooltips by column: the lamp column's explains the flare mark.
+    column_notes: dict[str, str] = field(default_factory=dict)
 
     @property
     def empty(self) -> bool:
@@ -527,7 +532,7 @@ class FolderRequirement(Requirement):
         if self.min_score is not None:
             columns.append(f"to {format_score(self.min_score)}")
         if self.clear_type is not None:
-            columns.append("lamp")
+            columns.append(_lamp_column(self.clear_type))
         return columns
 
     def _gap_cells(self, row: pd.Series) -> list[str]:
@@ -540,8 +545,7 @@ class FolderRequirement(Requirement):
             if _meets_clear_type(row, self.clear_type):
                 cells.append(CHECK)
             else:
-                have = LAMP_LABELS[Lamp(row["lamp"])]
-                cells.append(f"{have} → {_clear_type_target(self.clear_type)}")
+                cells.append(LAMP_LABELS[Lamp(row["lamp"])])
         return cells
 
     def blockers(self, data: "DDRDataset") -> BlockerReport:
@@ -583,5 +587,7 @@ class FolderRequirement(Requirement):
             exceptions_allowed=self.exceptions,
             to_improve=int(counts.get(TO_IMPROVE, 0)),
             average=average,
-            lamp_note=FLARE_NOTE if self.flare_counts else None,
+            column_notes=(
+                {_lamp_column(self.clear_type): FLARE_NOTE} if self.flare_counts else {}
+            ),
         )
