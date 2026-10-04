@@ -1,5 +1,6 @@
 import math
 import re
+import unicodedata
 from typing import List
 
 import streamlit as st
@@ -9,14 +10,49 @@ from life4.life4.core import Life4Rank
 from life4.life4.ranks.requirements import BlockerReport, Requirement
 
 
+# A handful of titles run long even romanized ("Kanbu de tomatte sugu tokeru ~
+# kyouki no Udongein (overdrive)"). Sizing to those would push the score far
+# from every other song and keep the dialog large, so they cut off instead.
+_MAX_TEXT_WIDTH = 420
+
+
+def _text_width(header: str, values) -> int:
+    # Source Sans at 14px: Latin runs at most ~7px a character (all caps
+    # included), CJK ~14px. Overshooting leaves a little air; undershooting
+    # cuts the text off.
+    def px(text: str) -> int:
+        return sum(14 if unicodedata.east_asian_width(c) in "WF" else 7 for c in text)
+
+    widest = 24 + max(px(header), *(px(str(v)) for v in values))
+    return min(widest, _MAX_TEXT_WIDTH)
+
+
+def _column_widths(rows) -> dict[str, int]:
+    # The grid sizes a column from a sample of its first rows and ignores
+    # outliers, so a long title or lamp further down gets cut off. Size each
+    # column from its longest value instead.
+    widths = {name: _text_width(name, rows[name]) for name in rows.columns}
+    widths["score"] = _text_width("score", (f"{v:,.0f}" for v in rows["score"]))
+    return widths
+
+
 def _blocker_table(rows) -> None:
+    widths = _column_widths(rows)
+    column_config = {
+        name: st.column_config.Column(width=width) for name, width in widths.items()
+    }
+    # "%,d" always groups with commas; "localized" would follow the viewer's
+    # browser locale.
+    column_config["score"] = st.column_config.NumberColumn(
+        format="%,d", width=widths["score"]
+    )
     st.dataframe(
         rows,
         hide_index=True,
-        width="stretch",
-        # "%,d" always groups with commas; "localized" would follow the
-        # viewer's browser locale.
-        column_config={"score": st.column_config.NumberColumn(format="%,d")},
+        # "stretch" pads every column to fill the dialog, pushing the numbers
+        # far from the song they belong to.
+        width="content",
+        column_config=column_config,
     )
 
 
@@ -34,10 +70,25 @@ def _escape_markdown(text: str) -> str:
     return re.sub(r"([\\`*_{}\[\]()#+\-.!|~<>$])", r"\\\1", text)
 
 
+# A "medium" dialog is 750px wide with 24px padding on each side.
+_MEDIUM_DIALOG_CONTENT = 702
+
+
+def _dialog_width(report: BlockerReport) -> str:
+    # Tables are sized to their contents, so a "large" dialog is mostly empty
+    # space unless a wide table needs it. A collapsed table still counts:
+    # expanding it must not scroll sideways.
+    tables = [report.required_rows, report.exception_rows]
+    widest = max(
+        (sum(_column_widths(t).values()) for t in tables if not t.empty), default=0
+    )
+    return "medium" if widest <= _MEDIUM_DIALOG_CONTENT else "large"
+
+
 def _show_blockers(requirement_label: str, report: BlockerReport) -> None:
     # The requirement is what the player came to look at, so it takes the
     # title slot. The decorator only takes a fixed title, so build it here.
-    st.dialog(requirement_label, width="large")(_blocker_dialog)(report)
+    st.dialog(requirement_label, width=_dialog_width(report))(_blocker_dialog)(report)
 
 
 def _section(title: str, *, expanded: bool):
