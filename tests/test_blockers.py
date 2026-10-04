@@ -1,3 +1,5 @@
+import pytest
+
 from conftest import chart, dataset
 
 from life4.life4.ranks.requirements import (
@@ -99,6 +101,69 @@ def test_three_way_collision_suffixes_all_three():
         "collider (CSP)",
         "collider (DSP)",
         "collider (ESP)",
+    }
+
+
+def unplayed_label(title):
+    data = dataset(chart(title=title, level=14))
+    blockers = FolderRequirement(level=14, min_score=950_000).blockers(data)
+    return blockers.unplayed_rows["song"].iloc[0]
+
+
+@pytest.mark.parametrize(
+    ("title", "label"),
+    [
+        # The sheet appends "(romanization, artist)" to titles in Japanese
+        # script or with stylised characters.
+        (
+            "ロンロンへ　ライライライ！ (Ronron e rairairai!, ここなつ)",
+            "Ronron e rairairai!",
+        ),
+        ("ΩVERSOUL (OVERSOUL, BlackY)", "OVERSOUL"),
+        # A romanization can hold ", " itself; the artist cannot be Latin
+        # script and hide in it, because it is always the last part.
+        ("*ハロー、プラネット。 (*Hello, Planet., sasakure.UK)", "*Hello, Planet."),
+        # Artists can list several names joined by "," or ", ".
+        (
+            "ロールプレイングゲーム (Role playing game, そらまふうらさか, RPG)",
+            "Role playing game",
+        ),
+        # Parentheses inside the romanization.
+        (
+            "革命 (X-Special) (KAKUMEI (X-Special), dj TAKA with NAOKI)",
+            "KAKUMEI (X-Special)",
+        ),
+        # The other way round: romanized title, Japanese in the parentheses.
+        (
+            "Wakusei lollipop (惑星☆ロリポップ, SOUND HOLIC feat. Nana Takahashi)",
+            "Wakusei lollipop",
+        ),
+        # A subtitle with no ", " is part of the title.
+        (
+            "SABER WING (AKIRA ISHIHARA Headshot mix)",
+            "SABER WING (AKIRA ISHIHARA Headshot mix)",
+        ),
+        ("Valanga", "Valanga"),
+    ],
+)
+def test_titles_show_their_romanization(title, label):
+    assert unplayed_label(title) == label
+
+
+def test_titles_that_romanize_alike_keep_their_difficulty():
+    # The sheet spells some songs both ways; two charts must not share a label.
+    data = dataset(
+        chart(title="Wakusei lollipop", level=14, diff="ESP"),
+        chart(
+            title="Wakusei lollipop (惑星☆ロリポップ, SOUND HOLIC feat. Nana Takahashi)",
+            level=14,
+            diff="CSP",
+        ),
+    )
+    blockers = FolderRequirement(level=14, min_score=950_000).blockers(data)
+    assert set(blockers.unplayed_rows["song"]) == {
+        "Wakusei lollipop (ESP)",
+        "Wakusei lollipop (CSP)",
     }
 
 

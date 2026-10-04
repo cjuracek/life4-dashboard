@@ -1,3 +1,4 @@
+import unicodedata
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol
@@ -19,18 +20,63 @@ if TYPE_CHECKING:
     from life4.ddr import DDRDataset
 
 
+_JAPANESE_SCRIPTS = (
+    "CJK",
+    "HIRAGANA",
+    "KATAKANA",
+    "HALFWIDTH KATAKANA",
+    "IDEOGRAPHIC",
+    "HANGUL",
+)
+
+
+def _has_japanese(text: str) -> bool:
+    return any(unicodedata.name(c, "").startswith(_JAPANESE_SCRIPTS) for c in text)
+
+
+def _romanized(title: str) -> str:
+    """The romanized form of a title the sheet stores in two scripts.
+
+    Titles in Japanese script or with stylised characters carry a trailing
+    "(romanization, artist)": "ΩVERSOUL (OVERSOUL, BlackY)" shows as
+    "OVERSOUL". The romanization can itself hold ", " ("*Hello, Planet.") and
+    the artist can list names ("そらまふうらさか, RPG"), so the cut is the
+    last ", " that leaves no Japanese before it. A few titles run the other
+    way, "Wakusei lollipop (惑星☆ロリポップ, ...)", and keep what precedes the
+    parentheses. A trailing group with no ", " is a subtitle and stays.
+    """
+    if not title.endswith(")"):
+        return title
+    depth = 0
+    for start in range(len(title) - 1, -1, -1):
+        depth += {")": 1, "(": -1}.get(title[start], 0)
+        if depth == 0:
+            break
+    head, inner = title[:start].rstrip(), title[start + 1 : -1]
+
+    cuts, depth = [], 0
+    for i, char in enumerate(inner):
+        depth += {"(": 1, ")": -1}.get(char, 0)
+        if depth == 0 and inner.startswith(", ", i):
+            cuts.append(i)
+    if not head or not cuts:
+        return title
+    latin = [inner[:cut] for cut in cuts if not _has_japanese(inner[:cut])]
+    return latin[-1] if latin else head
+
+
 def _song_labels(charts: pd.DataFrame) -> pd.Series:
-    """Song titles, disambiguated by difficulty only where a title repeats.
+    """Romanized song titles, disambiguated by difficulty only where one repeats.
 
     Within one level a title is almost always unique, so a difficulty column
     would be dead weight on ~99% of rows. Where a song does have two charts at
     the same level, each row carries its own difficulty: "Ace out (CSP)" and
-    "Ace out (ESP)".
+    "Ace out (ESP)". Repeats are found after romanizing, because the sheet
+    spells a few songs both ways.
     """
-    repeated = charts.groupby("title")["title"].transform("size") > 1
-    return charts["title"].where(
-        ~repeated, charts["title"] + " (" + charts["diff"] + ")"
-    )
+    titles = charts["title"].map(_romanized)
+    repeated = titles.groupby(titles).transform("size") > 1
+    return titles.where(~repeated, titles + " (" + charts["diff"] + ")")
 
 
 UNPLAYED = "unplayed"
