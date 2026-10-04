@@ -29,6 +29,7 @@ CANONICAL_COLUMNS = (
     "fc_date",
     "life4_date",
     "availability",
+    "flare",
 )
 
 #: One shared table, not per-tab schemas. The WORLD tab is live and will drift;
@@ -51,6 +52,7 @@ COLUMN_ALIASES: dict[str, frozenset[str]] = {
     "fc_date": frozenset({"FC Date"}),
     "life4_date": frozenset({"Life4 Date"}),
     "availability": frozenset({"Availability"}),
+    "flare": frozenset({"Flare"}),
 }
 
 
@@ -71,6 +73,11 @@ SINGLES_DIFFICULTIES = ("bSP", "BSP", "DSP", "ESP", "CSP")
 LEVEL_RANGE = (1, 19)
 
 MAX_SCORE = 1_000_000
+
+#: FLARE runs I-IX, then EX. The sheet writes I-IX as numbers, so EX is stored
+#: as the tenth level and "Flare 8+" is an ordinary comparison.
+FLARE_NUMBERED = range(1, 10)
+FLARE_EX = 10
 
 #: How many offending rows an error message names before it summarises.
 _MAX_REPORTED_ROWS = 5
@@ -248,7 +255,43 @@ def _raise_on_bad_values(frame: pd.DataFrame, tab_name: str) -> None:
         )
 
 
-def normalize(csv_text: str, tab_name: str) -> pd.DataFrame:
+def _parse_flare(frame: pd.DataFrame, tab_name: str) -> pd.Series:
+    """Flare as a number: 1-9, EX as 10, NaN where none was earned.
+
+    Its own parser rather than a NUMERIC_COLUMNS entry: "EX" is a legal cell,
+    so the coercion-loss rule would reject it. A flare is a pass on a played
+    chart, so one on a chart with no score is a misplaced cell, not a flare.
+    """
+    cells = frame["flare"]
+    text = cells.astype(str).str.strip()
+    is_ex = text.eq("EX")
+    flare = pd.to_numeric(text, errors="coerce").mask(is_ex, FLARE_EX)
+    blank = _blank(cells)
+
+    bad = ~blank & ~is_ex & ~flare.isin(FLARE_NUMBERED)
+    if bad.any():
+        raise ValueDefectError(
+            f"Tab {tab_name!r} has "
+            + _plural(int(bad.sum()), "flare")
+            + " that is not a level from 1 to 9 or EX:\n"
+            + _describe_rows(frame, bad, ("diff", "title", "flare"))
+            + "\n  Fix: correct the Flare cell in the sheet."
+        )
+    unplayed = ~blank & frame["score"].isna()
+    if unplayed.any():
+        raise ValueDefectError(
+            f"Tab {tab_name!r} has "
+            + _plural(int(unplayed.sum()), "flare")
+            + " on a chart with no score:\n"
+            + _describe_rows(frame, unplayed, ("diff", "title", "score", "flare"))
+            + "\n  Fix: fill in the score, or clear the Flare cell."
+        )
+    return flare.where(~blank)
+
+
+def normalize(
+    csv_text: str, tab_name: str, *, absent: tuple[str, ...] = ()
+) -> pd.DataFrame:
     """Parse raw CSV text into a validated frame of singles charts.
 
     Only the columns in CANONICAL_COLUMNS are kept, and only singles rows.
@@ -257,6 +300,10 @@ def normalize(csv_text: str, tab_name: str) -> pd.DataFrame:
     and so is a cell whose value cannot be trusted -- before any number is
     computed. Silent wrongness is the failure mode this whole layer exists to
     prevent.
+
+    ``absent`` names canonical columns this tab is known not to carry -- A3
+    has no flare. They are not looked up, even if the sheet grows one, and
+    come back empty so every tab still has the same columns.
 
     Order matters. The singles filter runs before the value checks so an
     untended doubles row cannot stop the app, and the coercion-loss check runs
@@ -268,6 +315,8 @@ def normalize(csv_text: str, tab_name: str) -> pd.DataFrame:
     rename: dict[str, str] = {}
     missing: list[str] = []
     for canonical, aliases in COLUMN_ALIASES.items():
+        if canonical in absent:
+            continue
         matches = [column for column in raw.columns if column in aliases]
         if not matches:
             missing.append(canonical)
@@ -286,12 +335,15 @@ def normalize(csv_text: str, tab_name: str) -> pd.DataFrame:
             f"life4/data/schema.py -- one entry covers every tab."
         )
 
-    out = raw.rename(columns=rename)[list(CANONICAL_COLUMNS)].copy()
+    out = raw.rename(columns=rename)
+    out = out.drop(columns=[c for c in absent if c in out.columns])
+    out = out.reindex(columns=list(CANONICAL_COLUMNS))
     out = _filter_to_singles(out, tab_name)
 
     _raise_on_coercion_loss(out, tab_name)
     for column in NUMERIC_COLUMNS:
         out[column] = pd.to_numeric(out[column], errors="coerce")
     _raise_on_bad_values(out, tab_name)
+    out["flare"] = _parse_flare(out, tab_name)
 
     return out.reset_index(drop=True)

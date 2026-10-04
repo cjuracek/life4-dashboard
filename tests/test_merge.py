@@ -139,3 +139,17 @@ def test_duplicate_key_in_secondary_raises():
     )
     with pytest.raises(DuplicateKeyError, match="secondary"):
         merge_scores(primary, secondary)
+
+
+def test_flare_comes_from_the_primary_even_when_the_secondary_scores_higher():
+    # Only WORLD has the flare gauge. A higher A3 score must not carry an
+    # empty flare over the WORLD one.
+    primary = frame(chart(title="a", level=16, score=990_000, flare=9))
+    secondary = frame(chart(title="a", level=16, score=995_000))
+    assert merge_scores(primary, secondary).charts.loc[0, "flare"] == 9
+
+
+def test_a_secondary_flare_is_never_read():
+    primary = frame(chart(title="a", level=16, score=990_000))
+    secondary = frame(chart(title="a", level=16, score=995_000, flare=10))
+    assert pd.isna(merge_scores(primary, secondary).charts.loc[0, "flare"])

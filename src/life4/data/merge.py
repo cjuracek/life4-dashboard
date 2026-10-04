@@ -38,6 +38,10 @@ DATE_COLUMNS = ("record_on", "pfc_date", "gfc_date", "fc_date", "life4_date")
 # Taken from the primary source, which defines the chart pool.
 PRIMARY_COLUMNS = ("title", "diff", "level", "availability")
 
+# Achievements only the primary cabinet can record. A3 had no flare gauge in
+# normal play, so its frame carries the column empty and it is never read.
+PRIMARY_ONLY_COLUMNS = ("flare",)
+
 
 def _raise_on_duplicate_keys(frame: pd.DataFrame, label: str) -> None:
     """Raise loudly if `frame` has more than one row for any (title, diff).
@@ -64,7 +68,7 @@ def merge_scores(primary: pd.DataFrame, secondary: pd.DataFrame) -> MergeResult:
 
     `primary` (WORLD) defines which charts exist, their level, and their
     availability. `secondary` (A3) contributes score and achievement history
-    only, joined on (title, diff).
+    only, joined on (title, diff). Flare is WORLD's alone.
 
     Score is the max across sources; achievement dates are unioned; the
     judgment columns travel as a unit from whichever source holds the higher
@@ -113,6 +117,9 @@ def merge_scores(primary: pd.DataFrame, secondary: pd.DataFrame) -> MergeResult:
 
     for column in DATE_COLUMNS:
         out[column] = m[f"{column}_p"].combine_first(m[f"{column}_s"])
+
+    for column in PRIMARY_ONLY_COLUMNS:
+        out[column] = m[f"{column}_p"]
 
     charts = out[list(CANONICAL_COLUMNS)].reset_index(drop=True)
     return MergeResult(charts=charts, orphans=orphans.reset_index(drop=True))

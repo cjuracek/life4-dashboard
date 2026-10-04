@@ -18,7 +18,8 @@ def load_frames():
     loader = GoogleSheetLoader(doc_id=secrets["doc_id"])
     tabs = secrets["tabs"]
     world = loader.load(gid=tabs["world"], tab_name="world")
-    a3 = loader.load(gid=tabs["a3"], tab_name="a3")
+    # Flare existed on A3 only in Babylon Galaxy, which was never played.
+    a3 = loader.load(gid=tabs["a3"], tab_name="a3", absent=("flare",))
     trials = loader.load_trials(gid=tabs["trials"])
     return world, a3, trials
 

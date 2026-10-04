@@ -30,12 +30,14 @@ class GoogleSheetLoader:
     def csv_url(self, gid: int) -> str:
         return _EXPORT_URL.format(doc_id=self.doc_id, gid=gid)
 
-    def load(self, gid: int, tab_name: str) -> pd.DataFrame:
+    def load(
+        self, gid: int, tab_name: str, *, absent: tuple[str, ...] = ()
+    ) -> pd.DataFrame:
         url = self.csv_url(gid)
         logger.info("Loading tab %s from %s", tab_name, url)
         response = requests.get(url, timeout=self.timeout)
         response.raise_for_status()
-        return normalize(response.text, tab_name)
+        return normalize(response.text, tab_name, absent=absent)
 
     def load_trials(self, gid: int) -> pd.DataFrame:
         """Trials use their own column names and are not normalized."""
