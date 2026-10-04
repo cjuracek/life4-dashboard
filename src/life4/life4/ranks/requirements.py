@@ -9,6 +9,7 @@ from life4.data.availability import ChartPool
 from life4.ddr import LAMP_LABELS, Lamp
 from life4.life4.core import Life4RankEnum
 from life4.life4.ranks.wording import (
+    CLEAR_TYPE_LABELS,
     LAMP_FOR_CLEAR_TYPE,
     ClearType,
     count_phrase,
@@ -86,6 +87,31 @@ TO_IMPROVE = "to improve"
 
 CHECK = "✓"
 
+#: A LIFE4 ruling, not a DDR fact, so it lives here rather than in the lamp:
+#: a FLARE VIII, IX or EX counts wherever a LIFE4 Clear is required. Full
+#: combos already outrank the red lamp, so nothing else changes.
+FLARE_FOR_LIFE4_CLEAR = 8
+FLARE_MARK = "*"
+FLARE_NOTE = f"{FLARE_MARK} Flare {FLARE_FOR_LIFE4_CLEAR}+ also counts"
+
+
+def _meets_clear_type(charts, clear_type: ClearType):
+    """Whether each chart meets a lamp-based clear type.
+
+    Takes a frame or a single row, so the requirement check and the blocker
+    cell cannot disagree about what counts.
+    """
+    meets = charts["lamp"] >= LAMP_FOR_CLEAR_TYPE[clear_type]
+    if clear_type is ClearType.LIFE4:
+        meets = meets | (charts["flare"] >= FLARE_FOR_LIFE4_CLEAR)
+    return meets
+
+
+def _clear_type_target(clear_type: ClearType) -> str:
+    """The lamp a blocker cell asks for, marked where a flare would also do."""
+    label = LAMP_LABELS[LAMP_FOR_CLEAR_TYPE[clear_type]]
+    return label + FLARE_MARK if clear_type is ClearType.LIFE4 else label
+
 
 def _sorted_for_display(rows: pd.DataFrame) -> pd.DataFrame:
     """One section's blockers, worst score first.
@@ -139,6 +165,8 @@ class BlockerReport:
     to_improve: int = 0
     # (mean of played charts, target), for Folder Average requirements.
     average: tuple[float | None, int] | None = None
+    # Tooltip for the lamp column, where its target carries the flare mark.
+    lamp_note: str | None = None
 
     @property
     def empty(self) -> bool:
@@ -200,6 +228,22 @@ class BlockerReport:
 class Requirement(ABC):
     multiple_levels: bool
     pool: ChartPool = ChartPool.EARNED
+    clear_type: ClearType | None = None
+
+    @property
+    def flare_counts(self) -> bool:
+        return self.clear_type is ClearType.LIFE4
+
+    def _marked(self, text: str) -> str:
+        """LIFE4's wording with the flare mark after "LIFE4 Clear".
+
+        Display only: str() stays LIFE4's exact text, which
+        test_conformance pins.
+        """
+        if not self.flare_counts:
+            return text
+        label = CLEAR_TYPE_LABELS[ClearType.LIFE4]
+        return text.replace(label, label + FLARE_MARK, 1)
 
     @abstractmethod
     def is_satisfied(self, data: "DDRDataset"):
@@ -333,7 +377,7 @@ class CountRequirement(Requirement, ProgressDisplay):
 
         charts = self._charts(data)
         if self.clear_type is not None:
-            return int((charts["lamp"] >= LAMP_FOR_CLEAR_TYPE[self.clear_type]).sum())
+            return int(_meets_clear_type(charts, self.clear_type).sum())
 
         scores = charts["score"].dropna()
         if self.min_score is None:
@@ -353,9 +397,10 @@ class CountRequirement(Requirement, ProgressDisplay):
         return f"{self._qualifying(data)}/{self.count}"
 
     def display_str(self, data: "DDRDataset") -> str:
+        text = self._marked(str(self))
         if self.is_satisfied(data):
-            return str(self)
-        return f"{self} ({self.get_progress(data)})"
+            return text
+        return f"{text} ({self.get_progress(data)})"
 
 
 class FolderRequirement(Requirement):
@@ -419,7 +464,7 @@ class FolderRequirement(Requirement):
     def _lamp_ok(self, charts: pd.DataFrame) -> pd.Series:
         if self.clear_type is None:
             return pd.Series(True, index=charts.index)
-        return charts["lamp"] >= LAMP_FOR_CLEAR_TYPE[self.clear_type]
+        return _meets_clear_type(charts, self.clear_type)
 
     def _score_ok(self, charts: pd.DataFrame) -> pd.Series:
         if self.min_score is None:
@@ -452,13 +497,14 @@ class FolderRequirement(Requirement):
         # Chart counts live in the blocker dialog, which knows about
         # exceptions. A short average names no chart, so no dialog opens for
         # it, and the checkbox text is the only place it can show.
+        text = self._marked(str(self))
         if self.average_score is None or self.is_satisfied(data):
-            return str(self)
+            return text
         mean = self._charts(data)["score"].mean()
         if mean >= self.average_score:
-            return str(self)
+            return text
         mean_str = "-" if pd.isna(mean) else f"{mean:,.0f}"
-        return f"{self} (Avg {mean_str}/{self.average_score:,})"
+        return f"{text} (Avg {mean_str}/{self.average_score:,})"
 
     def _categories(self, failing: pd.DataFrame) -> pd.Series:
         scored = failing["score"].notna()
@@ -491,12 +537,11 @@ class FolderRequirement(Requirement):
         if self.min_score is not None:
             cells.append(_score_gap(row["score"], self.min_score))
         if self.clear_type is not None:
-            required = LAMP_FOR_CLEAR_TYPE[self.clear_type]
-            if row["lamp"] >= required:
+            if _meets_clear_type(row, self.clear_type):
                 cells.append(CHECK)
             else:
                 have = LAMP_LABELS[Lamp(row["lamp"])]
-                cells.append(f"{have} → {LAMP_LABELS[required]}")
+                cells.append(f"{have} → {_clear_type_target(self.clear_type)}")
         return cells
 
     def blockers(self, data: "DDRDataset") -> BlockerReport:
@@ -538,4 +583,5 @@ class FolderRequirement(Requirement):
             exceptions_allowed=self.exceptions,
             to_improve=int(counts.get(TO_IMPROVE, 0)),
             average=average,
+            lamp_note=FLARE_NOTE if self.flare_counts else None,
         )

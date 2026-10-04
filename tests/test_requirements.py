@@ -410,3 +410,65 @@ def test_sdp_below_the_required_level_does_not_satisfy():
     d = dataset(sdp("a", 12))
     req = CountRequirement(level=13, count=1, clear_type=ClearType.SDP, or_higher=True)
     assert not req.is_satisfied(d)
+
+
+# --- flare ------------------------------------------------------------------
+# A LIFE4 ruling: FLARE VIII, IX or EX counts wherever a LIFE4 Clear is needed.
+
+
+def flared(title, level, score, flare):
+    return chart(
+        title=title, level=level, score=score, record_on="1/1/2026", flare=flare
+    )
+
+
+def test_flare_8_and_above_count_as_a_life4_clear():
+    d = dataset(
+        flared("viii", 16, 980_000, 8),
+        flared("ex", 16, 980_000, 10),
+        flared("vii", 16, 980_000, 7),
+    )
+    req = CountRequirement(level=16, count=3, clear_type=ClearType.LIFE4)
+    assert req.get_progress(d) == "2/3"
+
+
+def test_flare_does_not_count_toward_a_full_combo():
+    d = dataset(flared("ex", 16, 999_000, 10))
+    assert not CountRequirement(
+        level=16, count=1, clear_type=ClearType.GOOD
+    ).is_satisfied(d)
+
+
+def test_a_flare_satisfies_a_life4_clear_folder():
+    d = dataset(
+        flared("flared", 16, 960_000, 9),
+        played("red", 16, 970_000) | {"life4_date": "1/2/2026"},
+    )
+    req = FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=950_000)
+    assert req.is_satisfied(d)
+
+
+def test_a_flare_below_8_does_not_satisfy_a_life4_clear_folder():
+    d = dataset(flared("vii", 16, 960_000, 7))
+    req = FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=950_000)
+    assert not req.is_satisfied(d)
+
+
+def test_life4_clear_is_marked_for_display_but_not_in_life4s_wording():
+    # str() is pinned to LIFE4's own text by test_conformance; the mark is
+    # this app's note that flares count.
+    d = dataset(flared("ex", 16, 999_000, 10))
+    folder = FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=950_000)
+    assert str(folder) == "LIFE4 Clear all 16s over 950k"
+    assert folder.display_str(d) == "LIFE4 Clear* all 16s over 950k"
+    count = CountRequirement(level=16, count=3, clear_type=ClearType.LIFE4)
+    assert count.display_str(d) == "LIFE4 Clear* 3 16s (1/3)"
+
+
+def test_only_life4_clear_requirements_count_flares():
+    assert CountRequirement(level=16, count=1, clear_type=ClearType.LIFE4).flare_counts
+    assert not CountRequirement(
+        level=16, count=1, clear_type=ClearType.PERFECT
+    ).flare_counts
+    assert not FolderRequirement(level=16, min_score=950_000).flare_counts
+    assert not MAPointsRequirement(points=4).flare_counts

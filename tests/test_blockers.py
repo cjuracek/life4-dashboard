@@ -317,7 +317,7 @@ def test_a_chart_over_target_missing_only_the_lamp_is_an_exception():
             "song": "Hou",
             "score": 990_100,
             "to 985k": "✓",
-            "lamp": "Clear → LIFE4 Clear",
+            "lamp": "Clear → LIFE4 Clear*",
         }
     ]
 
@@ -372,7 +372,7 @@ def test_without_exceptions_a_lamp_only_failure_is_required():
     req = FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=950_000)
     report = req.blockers(data)
     assert report.required_rows.to_dict("records") == [
-        {"song": "s", "score": 990_000, "to 950k": "✓", "lamp": "Clear → LIFE4 Clear"}
+        {"song": "s", "score": 990_000, "to 950k": "✓", "lamp": "Clear → LIFE4 Clear*"}
     ]
     assert report.exception_rows.empty
 
@@ -454,3 +454,26 @@ def test_disambiguated_titles_survive_the_split_into_sections():
     report = sixteens(exceptions=3, exception_floor=930_000).blockers(data)
     assert list(report.unplayed_rows["song"]) == ["Ace out (CSP)"]
     assert list(report.exception_rows["song"]) == ["Ace out (ESP)"]
+
+
+def _life4_sixteens():
+    return FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=985_000)
+
+
+def test_a_flare_8_meets_the_lamp():
+    data = dataset(played("viii", 16, 980_000, flare=8))
+    assert _life4_sixteens().blockers(data).required_rows.loc[0, "lamp"] == "✓"
+
+
+def test_a_flare_below_8_still_needs_the_lamp():
+    data = dataset(played("vii", 16, 980_000, flare=7))
+    assert _life4_sixteens().blockers(data).required_rows.loc[0, "lamp"] == (
+        "Clear → LIFE4 Clear*"
+    )
+
+
+def test_the_lamp_column_explains_the_mark_only_where_flares_count():
+    data = dataset(played("s", 16, 980_000))
+    assert _life4_sixteens().blockers(data).lamp_note == "* Flare 8+ also counts"
+    pfc = FolderRequirement(level=16, clear_type=ClearType.PERFECT, min_score=985_000)
+    assert pfc.blockers(data).lamp_note is None

@@ -7,7 +7,7 @@ import streamlit as st
 
 from life4.ddr import DDRDataset
 from life4.life4.core import Life4Rank
-from life4.life4.ranks.requirements import BlockerReport, Requirement
+from life4.life4.ranks.requirements import FLARE_NOTE, BlockerReport, Requirement
 
 
 # A handful of titles run long even romanized ("Kanbu de tomatte sugu tokeru ~
@@ -36,11 +36,17 @@ def _column_widths(rows) -> dict[str, int]:
     return widths
 
 
-def _blocker_table(rows) -> None:
+def _blocker_table(rows, lamp_note: str | None) -> None:
     widths = _column_widths(rows)
     column_config = {
         name: st.column_config.Column(width=width) for name, width in widths.items()
     }
+    if "lamp" in widths and lamp_note:
+        # Explains the * on "LIFE4 Clear*". Tooltips are Markdown, where a
+        # leading "* " would turn the note into a bullet.
+        column_config["lamp"] = st.column_config.Column(
+            width=widths["lamp"], help=_escape_markdown(lamp_note)
+        )
     # "%,d" always groups with commas; "localized" would follow the viewer's
     # browser locale.
     column_config["score"] = st.column_config.NumberColumn(
@@ -106,7 +112,7 @@ def _blocker_dialog(report: BlockerReport) -> None:
             _title_grid(list(report.unplayed_rows["song"]))
     if not report.required_rows.empty:
         with _section(report.required_title(), expanded=True):
-            _blocker_table(report.required_rows)
+            _blocker_table(report.required_rows, report.lamp_note)
     if not report.exceptions_allowed:
         return
     if report.exception_rows.empty:
@@ -116,7 +122,7 @@ def _blocker_dialog(report: BlockerReport) -> None:
     # Under budget nothing in the pool has to change, so it starts closed;
     # over budget the player has to pick from it, so it opens.
     with _section(report.exceptions_title(), expanded=report.over_budget):
-        _blocker_table(report.exception_rows)
+        _blocker_table(report.exception_rows, report.lamp_note)
 
 
 class Life4RankDisplay:
@@ -126,11 +132,13 @@ class Life4RankDisplay:
 
     def create_checkbox(self, requirement: Requirement, group: str):
         satisfied = requirement.is_satisfied(self.data)
+        # Labels are Markdown, and "LIFE4 Clear*" carries a literal asterisk.
+        label = _escape_markdown(requirement.display_str(self.data))
         # A keyed checkbox's identity is its key alone, so Streamlit keeps its
         # session value and ignores `value=` on later reruns. Keying on
         # `satisfied` makes a flip after "Refresh data" a new widget.
         st.checkbox(
-            requirement.display_str(self.data),
+            label,
             disabled=True,
             value=satisfied,
             key=f"{self.life4_rank}|{group}|{requirement}|{satisfied}",
@@ -145,7 +153,13 @@ class Life4RankDisplay:
         if st.button(
             report.label(), key=f"{self.life4_rank}|{group}|{requirement}|blockers"
         ):
-            _show_blockers(requirement.display_str(self.data), report)
+            _show_blockers(label, report)
+
+    @staticmethod
+    def _heading(text: str, requirements: List[Requirement]) -> None:
+        # One tooltip per heading explains the * on every LIFE4 Clear below it.
+        flares = any(req.flare_counts for req in requirements)
+        st.markdown(text, help=_escape_markdown(FLARE_NOTE) if flares else None)
 
     def _visualize_reqs(self, requirements: List[Requirement], group: str):
         requirement_levels = range(14, 20)
@@ -196,7 +210,7 @@ class Life4RankDisplay:
         progress = f"{completed_requirements}/{total_requirements}"
         expander_title += f"\n\n  • {progress} requirements completed\n\n  • {available_substitutions} substitutions available"
         with st.expander(expander_title, expanded=False):
-            st.write("Requirements")
+            self._heading("Requirements", self.life4_rank.requirements)
             self._visualize_reqs(self.life4_rank.requirements, group="req")
-            st.write("Substitutions")
+            self._heading("Substitutions", self.life4_rank.substitutions)
             self._visualize_reqs(self.life4_rank.substitutions, group="sub")
