@@ -166,10 +166,10 @@ def test_lamp_count_accepts_better_lamps():
     assert req.is_satisfied(d)
 
 
-def test_higher_diff_counts_charts_at_and_above_the_level():
+def test_or_higher_counts_charts_at_and_above_the_level():
     d = dataset(mfc("a", 11), mfc("b", 14), mfc("c", 9))
     req = CountRequirement(
-        level=11, count=2, clear_type=ClearType.MARVELOUS, higher_diff=True
+        level=11, count=2, clear_type=ClearType.MARVELOUS, or_higher=True
     )
     assert req.is_satisfied(d)
     assert req.get_progress(d) == "2/2"
@@ -177,15 +177,13 @@ def test_higher_diff_counts_charts_at_and_above_the_level():
 
 def test_sdp_count_accepts_an_mfc():
     d = dataset(mfc("a", 13))
-    req = CountRequirement(
-        level=13, count=1, clear_type=ClearType.SDP, higher_diff=True
-    )
+    req = CountRequirement(level=13, count=1, clear_type=ClearType.SDP, or_higher=True)
     assert req.is_satisfied(d)
 
 
-def test_higher_diff_requirements_group_under_other():
+def test_or_higher_requirements_group_under_other():
     assert CountRequirement(
-        level=13, count=1, clear_type=ClearType.SDP, higher_diff=True
+        level=13, count=1, clear_type=ClearType.SDP, or_higher=True
     ).multiple_levels
     assert not CountRequirement(
         level=16, count=8, clear_type=ClearType.PERFECT
@@ -291,14 +289,31 @@ def test_folder_average_passes_when_the_mean_clears_the_target():
     assert req.is_satisfied(d)
 
 
-def test_folder_average_progress_reports_both_conditions():
+def test_folder_display_str_leaves_chart_counts_to_the_blocker_dialog():
+    d = dataset(pfc("a", 14, 10), played("b", 14, 900_000))
+    req = FolderRequirement(level=14, clear_type=ClearType.PERFECT, min_score=999_000)
+    assert not req.is_satisfied(d)
+    assert req.display_str(d) == str(req)
+
+
+def test_folder_display_str_shows_an_average_below_target():
+    # A short average lists no chart, so no blocker button renders; the
+    # checkbox text is the only place it shows.
     d = dataset(pfc("a", 14, 10), played("b", 14, 900_000))
     req = FolderRequirement(
         level=14, clear_type=ClearType.PERFECT, average_score=999_500
     )
-    progress = req.get_progress(d)
-    assert "Lamp 1/2" in progress
-    assert "Avg" in progress
+    assert req.display_str(d) == f"{req} (Avg 949,950/999,500)"
+
+
+def test_folder_display_str_hides_an_average_that_clears_target():
+    # The lamp fails but the average is met: the blocker dialog has it.
+    d = dataset(pfc("a", 14, 0), played("b", 14, 999_900))
+    req = FolderRequirement(
+        level=14, clear_type=ClearType.PERFECT, average_score=999_500
+    )
+    assert not req.is_satisfied(d)
+    assert req.display_str(d) == str(req)
 
 
 def test_folder_requires_exactly_one_of_floor_or_average():
@@ -345,7 +360,6 @@ def test_folder_agrees_on_unplayed_when_score_present_but_no_record_on():
     req = FolderRequirement(level=16, min_score=950_000)
     assert req.is_satisfied(d)
     assert req.blockers(d).empty
-    assert req.get_progress(d) == "2/2"
 
 
 def test_a_removed_chart_still_credits_a_score_you_earned_on_it():
@@ -378,9 +392,7 @@ def test_ceiling_is_a_count_of_one():
 
 def test_sdp_count_with_no_sdps_is_unsatisfied_not_a_crash():
     d = dataset(played("a", 16, 900_000))
-    req = CountRequirement(
-        level=13, count=1, clear_type=ClearType.SDP, higher_diff=True
-    )
+    req = CountRequirement(level=13, count=1, clear_type=ClearType.SDP, or_higher=True)
     assert not req.is_satisfied(d)
     assert req.get_progress(d) == "0/1"
 
@@ -388,7 +400,7 @@ def test_sdp_count_with_no_sdps_is_unsatisfied_not_a_crash():
 def test_mfc_count_with_no_mfcs_is_unsatisfied_not_a_crash():
     d = dataset(played("a", 16, 900_000))
     req = CountRequirement(
-        level=13, count=1, clear_type=ClearType.MARVELOUS, higher_diff=True
+        level=13, count=1, clear_type=ClearType.MARVELOUS, or_higher=True
     )
     assert not req.is_satisfied(d)
     assert req.get_progress(d) == "0/1"
@@ -396,7 +408,66 @@ def test_mfc_count_with_no_mfcs_is_unsatisfied_not_a_crash():
 
 def test_sdp_below_the_required_level_does_not_satisfy():
     d = dataset(sdp("a", 12))
-    req = CountRequirement(
-        level=13, count=1, clear_type=ClearType.SDP, higher_diff=True
-    )
+    req = CountRequirement(level=13, count=1, clear_type=ClearType.SDP, or_higher=True)
     assert not req.is_satisfied(d)
+
+
+# --- flare ------------------------------------------------------------------
+# A LIFE4 ruling: FLARE VIII, IX or EX counts wherever a LIFE4 Clear is needed.
+
+
+def flared(title, level, score, flare):
+    return chart(
+        title=title, level=level, score=score, record_on="1/1/2026", flare=flare
+    )
+
+
+def test_flare_8_and_above_count_as_a_life4_clear():
+    d = dataset(
+        flared("viii", 16, 980_000, 8),
+        flared("ex", 16, 980_000, 10),
+        flared("vii", 16, 980_000, 7),
+    )
+    req = CountRequirement(level=16, count=3, clear_type=ClearType.LIFE4)
+    assert req.get_progress(d) == "2/3"
+
+
+def test_flare_does_not_count_toward_a_full_combo():
+    d = dataset(flared("ex", 16, 999_000, 10))
+    assert not CountRequirement(
+        level=16, count=1, clear_type=ClearType.GOOD
+    ).is_satisfied(d)
+
+
+def test_a_flare_satisfies_a_life4_clear_folder():
+    d = dataset(
+        flared("flared", 16, 960_000, 9),
+        played("red", 16, 970_000) | {"life4_date": "1/2/2026"},
+    )
+    req = FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=950_000)
+    assert req.is_satisfied(d)
+
+
+def test_a_flare_below_8_does_not_satisfy_a_life4_clear_folder():
+    d = dataset(flared("vii", 16, 960_000, 7))
+    req = FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=950_000)
+    assert not req.is_satisfied(d)
+
+
+def test_life4_clear_displays_in_life4s_own_wording():
+    # The flare note is a tooltip beside the label, so the label carries no
+    # mark of its own.
+    d = dataset(flared("ex", 16, 999_000, 10))
+    folder = FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=950_000)
+    assert folder.display_str(d) == "LIFE4 Clear all 16s over 950k"
+    count = CountRequirement(level=16, count=3, clear_type=ClearType.LIFE4)
+    assert count.display_str(d) == "LIFE4 Clear 3 16s (1/3)"
+
+
+def test_only_life4_clear_requirements_count_flares():
+    assert CountRequirement(level=16, count=1, clear_type=ClearType.LIFE4).flare_counts
+    assert not CountRequirement(
+        level=16, count=1, clear_type=ClearType.PERFECT
+    ).flare_counts
+    assert not FolderRequirement(level=16, min_score=950_000).flare_counts
+    assert not MAPointsRequirement(points=4).flare_counts

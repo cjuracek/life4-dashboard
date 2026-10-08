@@ -7,9 +7,9 @@ from life4.data.schema import CANONICAL_COLUMNS, SchemaError, normalize
 
 WORLD_CSV = (
     "Diff,Level,Title,# times,Last played,M,P,Gr,Go,O.K.,M,EX,Score,"
-    "Record On,AAA Date,PFC Date,GFC Date,FC Date,Life4 Date,Availability,MA\n"
+    "Record On,AAA Date,PFC Date,GFC Date,FC Date,Life4 Date,Flare,Availability,MA\n"
     "ESP,16,Metamorphic,3,4/17/2026,900,4,0,0,0,1,1800,999670,"
-    "4/1/2026,4/2/2026,4/3/2026,,,,0.99\n"
+    "4/1/2026,4/2/2026,4/3/2026,,,,,0.99\n"
 )
 
 A3_CSV = (
@@ -27,13 +27,14 @@ def test_maps_world_p_to_perfect():
 
 
 def test_maps_a3_perf_to_perfect():
-    df = normalize(A3_CSV, "a3")
+    df = normalize(A3_CSV, "a3", absent=("flare",))
     assert df.loc[0, "perfect"] == 20
 
 
 def test_both_tabs_produce_the_same_columns():
     assert list(normalize(WORLD_CSV, "world").columns) == list(CANONICAL_COLUMNS)
-    assert list(normalize(A3_CSV, "a3").columns) == list(CANONICAL_COLUMNS)
+    a3 = normalize(A3_CSV, "a3", absent=("flare",))
+    assert list(a3.columns) == list(CANONICAL_COLUMNS)
 
 
 def test_duplicate_m_header_is_ignored_because_neither_is_read():
@@ -59,7 +60,7 @@ def test_extra_column_is_ignored():
 def test_reordering_read_columns_is_fine():
     reordered = (
         "Title,Diff,Level,Score,P,Record On,PFC Date,GFC Date,FC Date,"
-        "Life4 Date,Availability\n"
+        "Life4 Date,Availability,Flare\n"
         "Metamorphic,ESP,16,999670,4,4/1/2026,4/3/2026,,,,\n"
     )
     df = normalize(reordered, "world")
@@ -85,7 +86,7 @@ def test_thousands_separators_parse_as_numbers():
 def test_numeric_columns_are_numeric_even_when_the_tab_is_all_blanks():
     blanks = (
         "Diff,Level,Title,Score,P,Record On,PFC Date,GFC Date,FC Date,"
-        "Life4 Date,Availability\n"
+        "Life4 Date,Availability,Flare\n"
         "ESP,16,Untouched,,,,,,,,\n"
     )
     df = normalize(blanks, "world")
@@ -100,7 +101,7 @@ def test_numeric_columns_are_numeric_even_when_the_tab_is_all_blanks():
 def _rows(*csv_rows: str) -> str:
     header = (
         "Diff,Level,Title,Score,P,Record On,PFC Date,GFC Date,FC Date,"
-        "Life4 Date,Availability\n"
+        "Life4 Date,Availability,Flare\n"
     )
     return header + "".join(csv_rows)
 
@@ -240,3 +241,56 @@ def test_perfect_is_not_range_checked():
     # Only its coercion is guarded; there is no known bound on the count.
     csv = _rows("ESP,16,Odd,999670,9999,4/1/2026,,,,,\n")
     assert normalize(csv, "world").loc[0, "perfect"] == 9999
+
+
+# --- flare ------------------------------------------------------------------
+
+
+def _flares(*cells: str) -> pd.Series:
+    rows = [
+        f"ESP,16,Song {i},990000,4,4/1/2026,,,,,,{cell}\n"
+        for i, cell in enumerate(cells)
+    ]
+    return normalize(_rows(*rows), "world")["flare"]
+
+
+def test_flare_levels_parse_as_numbers_and_ex_ranks_above_ix():
+    # The sheet writes the same level as "9" or "9.0" depending on the cell.
+    assert _flares("8", "9.0", "EX").tolist() == [8, 9, 10]
+
+
+def test_a_blank_flare_means_no_flare():
+    assert _flares("").isna().all()
+
+
+@pytest.mark.parametrize("cell", ["X", "0", "10", "8.5", "IX"])
+def test_a_flare_outside_i_to_ex_fails(cell):
+    with pytest.raises(ValueDefectError) as exc:
+        _flares(cell)
+    assert "Song 0" in str(exc.value)
+
+
+def test_a_flare_on_an_unplayed_chart_fails():
+    csv = _rows("ESP,16,Ghost,,,,,,,,,EX\n")
+    with pytest.raises(ValueDefectError) as exc:
+        normalize(csv, "world")
+    assert "Ghost" in str(exc.value)
+
+
+def test_a_missing_flare_column_fails_on_a_tab_that_should_have_one():
+    without_flare = WORLD_CSV.replace("Flare,", "", 1).replace(
+        ",,,,,0.99", ",,,,0.99", 1
+    )
+    with pytest.raises(SchemaError) as exc:
+        normalize(without_flare, "world")
+    assert "flare" in str(exc.value)
+
+
+def test_a_tab_without_the_flare_gauge_reads_as_no_flares():
+    assert normalize(A3_CSV, "a3", absent=("flare",))["flare"].isna().all()
+
+
+def test_a_flare_column_on_an_absent_tab_is_not_read():
+    with_flare = A3_CSV.replace('"Availability"\n', '"Availability","Flare"\n', 1)
+    with_flare = with_flare.replace('"",""\n', '"","","EX"\n', 1)
+    assert normalize(with_flare, "a3", absent=("flare",))["flare"].isna().all()

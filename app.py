@@ -18,7 +18,8 @@ def load_frames():
     loader = GoogleSheetLoader(doc_id=secrets["doc_id"])
     tabs = secrets["tabs"]
     world = loader.load(gid=tabs["world"], tab_name="world")
-    a3 = loader.load(gid=tabs["a3"], tab_name="a3")
+    # Flare existed on A3 only in Babylon Galaxy, which was never played.
+    a3 = loader.load(gid=tabs["a3"], tab_name="a3", absent=("flare",))
     trials = loader.load_trials(gid=tabs["trials"])
     return world, a3, trials
 
@@ -57,7 +58,9 @@ def main() -> None:
         st.image("assets/life4-logo.png", width="stretch")
 
     names = tuple(tier.name for tier in IN_SCOPE)
-    rank_choice = st.selectbox("Select rank", names, index=len(names) - 1)
+    rank_choice = st.selectbox(
+        "Select rank", names, index=names.index(Life4RankEnum.Amethyst.name)
+    )
     subranks = load_ranks()[Life4RankEnum[rank_choice]]
 
     for sub_rank, column in zip(subranks, st.columns(5)):

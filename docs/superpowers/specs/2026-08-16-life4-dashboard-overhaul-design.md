@@ -411,7 +411,7 @@ filtered frame, and each `Requirement` subclass declares which it consumes:
 to split.
 
 **No level filtering, ever.** MA points are earned from MFCs and SDPs at *any*
-difficulty, and the owner's history is weighted toward low levels: 12 MFCs and 81
+level, and the owner's history is weighted toward low levels: 12 MFCs and 81
 SDPs sit below level 8. Restricting the load to level 8+ — which is what the
 WORLD tab's filter view does, and what `gviz` therefore returned — costs **11.22
 MA points**, dropping the total from 31.72 to 20.50. Emerald I requires 12 and
