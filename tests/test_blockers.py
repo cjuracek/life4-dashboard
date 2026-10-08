@@ -317,7 +317,7 @@ def test_a_chart_over_target_missing_only_the_lamp_is_an_exception():
             "song": "Hou",
             "score": 990_100,
             "to 985k": "✓",
-            "to LIFE4 Clear*": "Clear",
+            "to LIFE4 Clear": "Clear",
         }
     ]
 
@@ -331,7 +331,7 @@ def test_a_met_lamp_reads_as_a_check():
         exceptions=17,
         exception_floor=965_000,
     )
-    assert req.blockers(data).exception_rows.loc[0, "to LIFE4 Clear*"] == "✓"
+    assert req.blockers(data).exception_rows.loc[0, "to LIFE4 Clear"] == "✓"
 
 
 def test_an_unplayed_chart_is_listed_by_name_alone():
@@ -372,7 +372,7 @@ def test_without_exceptions_a_lamp_only_failure_is_required():
     req = FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=950_000)
     report = req.blockers(data)
     assert report.required_rows.to_dict("records") == [
-        {"song": "s", "score": 990_000, "to 950k": "✓", "to LIFE4 Clear*": "Clear"}
+        {"song": "s", "score": 990_000, "to 950k": "✓", "to LIFE4 Clear": "Clear"}
     ]
     assert report.exception_rows.empty
 
@@ -457,7 +457,7 @@ def test_disambiguated_titles_survive_the_split_into_sections():
     assert list(report.exception_rows["song"]) == ["Ace out (ESP)"]
 
 
-LIFE4 = "to LIFE4 Clear*"
+LIFE4 = "to LIFE4 Clear"
 
 
 def _life4_sixteens():
@@ -474,10 +474,15 @@ def test_a_flare_below_8_still_needs_the_lamp():
     assert _life4_sixteens().blockers(data).required_rows.loc[0, LIFE4] == "Clear"
 
 
-def test_the_lamp_column_explains_the_mark_only_where_flares_count():
+def test_the_header_explains_flares_only_where_they_count():
     data = dataset(played("s", 16, 980_000))
-    assert _life4_sixteens().blockers(data).column_notes == {
-        LIFE4: "* Flare 8+ also counts"
-    }
+    assert _life4_sixteens().blockers(data).header_lines() == ["* Flare 8+ also counts"]
     pfc = FolderRequirement(level=16, clear_type=ClearType.PERFECT, min_score=985_000)
-    assert pfc.blockers(data).column_notes == {}
+    assert pfc.blockers(data).header_lines() == []
+
+
+def test_the_dialog_title_marks_life4_clear_for_the_header_note():
+    data = dataset(played("s", 16, 980_000))
+    assert _life4_sixteens().blocker_title(data) == "LIFE4 Clear* all 16s over 985k"
+    pfc = FolderRequirement(level=16, clear_type=ClearType.PERFECT, min_score=985_000)
+    assert pfc.blocker_title(data) == "PFC all 16s over 985k"

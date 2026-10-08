@@ -37,19 +37,14 @@ def _column_widths(rows) -> dict[str, int]:
 
 
 def _header(name: str) -> str:
-    # Capitalize the first letter only: "to LIFE4 Clear*" -> "To LIFE4 Clear*".
+    # Capitalize the first letter only: "to LIFE4 Clear" -> "To LIFE4 Clear".
     return name[:1].upper() + name[1:]
 
 
-def _blocker_table(rows, column_notes: dict[str, str]) -> None:
+def _blocker_table(rows) -> None:
     widths = _column_widths(rows)
     column_config = {
-        name: st.column_config.Column(
-            _header(name),
-            width=width,
-            # Tooltips are Markdown, where a leading "* " becomes a bullet.
-            help=_escape_markdown(column_notes[name]) if name in column_notes else None,
-        )
+        name: st.column_config.Column(_header(name), width=width)
         for name, width in widths.items()
     }
     # "%,d" always groups with commas; "localized" would follow the viewer's
@@ -102,6 +97,17 @@ def _show_blockers(requirement_label: str, report: BlockerReport) -> None:
     st.dialog(requirement_label, width=_dialog_width(report))(_blocker_dialog)(report)
 
 
+# A dialog title holds one line, so the header captions stand in for a
+# subtitle. Streamlit spaces them like any other element, which leaves them
+# floating between the title and the tables; this pulls them up under it.
+# The style sits inside the gapless container, where its empty element adds
+# no space.
+_DIALOG_HEADER_KEY = "blocker-header"
+_DIALOG_HEADER_CSS = (
+    f"<style>.st-key-{_DIALOG_HEADER_KEY} {{margin-top: -1.625rem; gap: 0}}</style>"
+)
+
+
 def _section(title: str, *, expanded: bool):
     # Compact: a bordered expander around a bordered table reads as a box in
     # a box. Every section uses it, so the three headings match.
@@ -109,15 +115,19 @@ def _section(title: str, *, expanded: bool):
 
 
 def _blocker_dialog(report: BlockerReport) -> None:
-    for line in report.header_lines():
-        st.caption(line)
+    if lines := report.header_lines():
+        with st.container(key=_DIALOG_HEADER_KEY):
+            st.html(_DIALOG_HEADER_CSS)
+            for line in lines:
+                # Markdown would turn the footnote's leading "* " into a bullet.
+                st.caption(_escape_markdown(line))
     if not report.unplayed_rows.empty:
         # Every one of these has to be played, so they lead, open.
         with _section(report.unplayed_title(), expanded=True):
             _title_grid(list(report.unplayed_rows["song"]))
     if not report.required_rows.empty:
         with _section(report.required_title(), expanded=True):
-            _blocker_table(report.required_rows, report.column_notes)
+            _blocker_table(report.required_rows)
     if not report.exceptions_allowed:
         return
     if report.exception_rows.empty:
@@ -127,7 +137,7 @@ def _blocker_dialog(report: BlockerReport) -> None:
     # Under budget nothing in the pool has to change, so it starts closed;
     # over budget the player has to pick from it, so it opens.
     with _section(report.exceptions_title(), expanded=report.over_budget):
-        _blocker_table(report.exception_rows, report.column_notes)
+        _blocker_table(report.exception_rows)
 
 
 class Life4RankDisplay:
@@ -137,7 +147,6 @@ class Life4RankDisplay:
 
     def create_checkbox(self, requirement: Requirement, group: str):
         satisfied = requirement.is_satisfied(self.data)
-        # Labels are Markdown, and "LIFE4 Clear*" carries a literal asterisk.
         label = _escape_markdown(requirement.display_str(self.data))
         # A keyed checkbox's identity is its key alone, so Streamlit keeps its
         # session value and ignores `value=` on later reruns. Keying on
@@ -146,6 +155,9 @@ class Life4RankDisplay:
             label,
             disabled=True,
             value=satisfied,
+            # On the requirement itself: a note under a long list is one the
+            # player has to go looking for.
+            help=FLARE_NOTE if requirement.flare_counts else None,
             key=f"{self.life4_rank}|{group}|{requirement}|{satisfied}",
         )
         if satisfied:
@@ -158,13 +170,8 @@ class Life4RankDisplay:
         if st.button(
             report.label(), key=f"{self.life4_rank}|{group}|{requirement}|blockers"
         ):
-            _show_blockers(label, report)
-
-    @staticmethod
-    def _heading(text: str, requirements: List[Requirement]) -> None:
-        # One tooltip per heading explains the * on every LIFE4 Clear below it.
-        flares = any(req.flare_counts for req in requirements)
-        st.markdown(text, help=_escape_markdown(FLARE_NOTE) if flares else None)
+            title = _escape_markdown(requirement.blocker_title(self.data))
+            _show_blockers(title, report)
 
     def _visualize_reqs(self, requirements: List[Requirement], group: str):
         requirement_levels = range(14, 20)
@@ -215,7 +222,7 @@ class Life4RankDisplay:
         progress = f"{completed_requirements}/{total_requirements}"
         expander_title += f"\n\n  • {progress} requirements completed\n\n  • {available_substitutions} substitutions available"
         with st.expander(expander_title, expanded=False):
-            self._heading("Requirements", self.life4_rank.requirements)
+            st.markdown("Requirements")
             self._visualize_reqs(self.life4_rank.requirements, group="req")
-            self._heading("Substitutions", self.life4_rank.substitutions)
+            st.markdown("Substitutions")
             self._visualize_reqs(self.life4_rank.substitutions, group="sub")

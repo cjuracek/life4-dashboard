@@ -454,15 +454,14 @@ def test_a_flare_below_8_does_not_satisfy_a_life4_clear_folder():
     assert not req.is_satisfied(d)
 
 
-def test_life4_clear_is_marked_for_display_but_not_in_life4s_wording():
-    # str() is pinned to LIFE4's own text by test_conformance; the mark is
-    # this app's note that flares count.
+def test_life4_clear_displays_in_life4s_own_wording():
+    # The flare note is a tooltip beside the label, so the label carries no
+    # mark of its own.
     d = dataset(flared("ex", 16, 999_000, 10))
     folder = FolderRequirement(level=16, clear_type=ClearType.LIFE4, min_score=950_000)
-    assert str(folder) == "LIFE4 Clear all 16s over 950k"
-    assert folder.display_str(d) == "LIFE4 Clear* all 16s over 950k"
+    assert folder.display_str(d) == "LIFE4 Clear all 16s over 950k"
     count = CountRequirement(level=16, count=3, clear_type=ClearType.LIFE4)
-    assert count.display_str(d) == "LIFE4 Clear* 3 16s (1/3)"
+    assert count.display_str(d) == "LIFE4 Clear 3 16s (1/3)"
 
 
 def test_only_life4_clear_requirements_count_flares():

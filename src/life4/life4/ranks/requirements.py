@@ -91,8 +91,15 @@ CHECK = "✓"
 #: a FLARE VIII, IX or EX counts wherever a LIFE4 Clear is required. Full
 #: combos already outrank the red lamp, so nothing else changes.
 FLARE_FOR_LIFE4_CLEAR = 8
+#: The list page's tooltip sits apart from the words it explains, so it names
+#: them. The blocker dialog marks them in its title and footnotes the mark
+#: directly beneath.
+FLARE_NOTE = (
+    f"Flare {FLARE_FOR_LIFE4_CLEAR}+ also counts as a "
+    f"{CLEAR_TYPE_LABELS[ClearType.LIFE4]}"
+)
 FLARE_MARK = "*"
-FLARE_NOTE = f"{FLARE_MARK} Flare {FLARE_FOR_LIFE4_CLEAR}+ also counts"
+FLARE_FOOTNOTE = f"{FLARE_MARK} Flare {FLARE_FOR_LIFE4_CLEAR}+ also counts"
 
 
 def _meets_clear_type(charts, clear_type: ClearType):
@@ -108,14 +115,8 @@ def _meets_clear_type(charts, clear_type: ClearType):
 
 
 def _lamp_column(clear_type: ClearType) -> str:
-    """The blocker table's lamp column, named for its target like "to 987k".
-
-    Marked where a flare would also do, so the mark appears once in the
-    header rather than on every row.
-    """
-    label = LAMP_LABELS[LAMP_FOR_CLEAR_TYPE[clear_type]]
-    mark = FLARE_MARK if clear_type is ClearType.LIFE4 else ""
-    return f"to {label}{mark}"
+    """The blocker table's lamp column, named for its target like "to 987k"."""
+    return f"to {LAMP_LABELS[LAMP_FOR_CLEAR_TYPE[clear_type]]}"
 
 
 def _sorted_for_display(rows: pd.DataFrame) -> pd.DataFrame:
@@ -170,8 +171,8 @@ class BlockerReport:
     to_improve: int = 0
     # (mean of played charts, target), for Folder Average requirements.
     average: tuple[float | None, int] | None = None
-    # Header tooltips by column: the lamp column's explains the flare mark.
-    column_notes: dict[str, str] = field(default_factory=dict)
+    # Whether a flare can stand in for the lamp, which the header footnotes.
+    flare_counts: bool = False
 
     @property
     def empty(self) -> bool:
@@ -227,6 +228,8 @@ class BlockerReport:
             current, target = self.average
             current_str = "-" if current is None else f"{current:,.0f}"
             lines.append(f"Folder average: {current_str} / {target:,}")
+        if self.flare_counts:
+            lines.append(FLARE_FOOTNOTE)
         return lines
 
 
@@ -239,17 +242,6 @@ class Requirement(ABC):
     def flare_counts(self) -> bool:
         return self.clear_type is ClearType.LIFE4
 
-    def _marked(self, text: str) -> str:
-        """LIFE4's wording with the flare mark after "LIFE4 Clear".
-
-        Display only: str() stays LIFE4's exact text, which
-        test_conformance pins.
-        """
-        if not self.flare_counts:
-            return text
-        label = CLEAR_TYPE_LABELS[ClearType.LIFE4]
-        return text.replace(label, label + FLARE_MARK, 1)
-
     @abstractmethod
     def is_satisfied(self, data: "DDRDataset"):
         pass
@@ -257,6 +249,14 @@ class Requirement(ABC):
     @abstractmethod
     def display_str(self, data: "DDRDataset") -> str:
         pass
+
+    def blocker_title(self, data: "DDRDataset") -> str:
+        """The label, marked after "LIFE4 Clear" for the dialog's footnote."""
+        text = self.display_str(data)
+        if not self.flare_counts:
+            return text
+        label = CLEAR_TYPE_LABELS[ClearType.LIFE4]
+        return text.replace(label, label + FLARE_MARK, 1)
 
     def blockers(self, data: "DDRDataset") -> BlockerReport:
         """Charts standing between this requirement and satisfaction.
@@ -402,7 +402,7 @@ class CountRequirement(Requirement, ProgressDisplay):
         return f"{self._qualifying(data)}/{self.count}"
 
     def display_str(self, data: "DDRDataset") -> str:
-        text = self._marked(str(self))
+        text = str(self)
         if self.is_satisfied(data):
             return text
         return f"{text} ({self.get_progress(data)})"
@@ -502,7 +502,7 @@ class FolderRequirement(Requirement):
         # Chart counts live in the blocker dialog, which knows about
         # exceptions. A short average names no chart, so no dialog opens for
         # it, and the checkbox text is the only place it can show.
-        text = self._marked(str(self))
+        text = str(self)
         if self.average_score is None or self.is_satisfied(data):
             return text
         mean = self._charts(data)["score"].mean()
@@ -587,7 +587,5 @@ class FolderRequirement(Requirement):
             exceptions_allowed=self.exceptions,
             to_improve=int(counts.get(TO_IMPROVE, 0)),
             average=average,
-            column_notes=(
-                {_lamp_column(self.clear_type): FLARE_NOTE} if self.flare_counts else {}
-            ),
+            flare_counts=self.flare_counts,
         )
