@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Protocol
 import pandas as pd
 
 from life4.data.availability import ChartPool
-from life4.ddr import LAMP_LABELS, Lamp
 from life4.life4.core import Life4RankEnum
 from life4.life4.ranks.wording import (
     CLEAR_TYPE_LABELS,
@@ -86,6 +85,7 @@ EXCEPTION = "exception"
 TO_IMPROVE = "to improve"
 
 CHECK = "✓"
+CROSS = "✗"
 
 #: A LIFE4 ruling, not a DDR fact, so it lives here rather than in the lamp:
 #: a FLARE VIII, IX or EX counts wherever a LIFE4 Clear is required. Full
@@ -114,9 +114,16 @@ def _meets_clear_type(charts, clear_type: ClearType):
     return meets
 
 
-def _lamp_column(clear_type: ClearType) -> str:
-    """The blocker table's lamp column, named for its target like "to 987k"."""
-    return f"to {LAMP_LABELS[LAMP_FOR_CLEAR_TYPE[clear_type]]}"
+#: The blocker table's lamp column says only whether the chart has the lamp,
+#: so it is named for the lamp rather than a distance to it ("to 987k"):
+#: listing the chart's current lamp read "Clear" as if the target were met.
+_LAMP_COLUMNS = {
+    ClearType.LIFE4: "LIFE4 Clear",
+    ClearType.GOOD: "FC",
+    ClearType.GREAT: "GFC",
+    ClearType.PERFECT: "PFC",
+    ClearType.MARVELOUS: "MFC",
+}
 
 
 def _sorted_for_display(rows: pd.DataFrame) -> pd.DataFrame:
@@ -532,7 +539,7 @@ class FolderRequirement(Requirement):
         if self.min_score is not None:
             columns.append(f"to {format_score(self.min_score)}")
         if self.clear_type is not None:
-            columns.append(_lamp_column(self.clear_type))
+            columns.append(_LAMP_COLUMNS[self.clear_type])
         return columns
 
     def _gap_cells(self, row: pd.Series) -> list[str]:
@@ -542,10 +549,8 @@ class FolderRequirement(Requirement):
         if self.min_score is not None:
             cells.append(_score_gap(row["score"], self.min_score))
         if self.clear_type is not None:
-            if _meets_clear_type(row, self.clear_type):
-                cells.append(CHECK)
-            else:
-                cells.append(LAMP_LABELS[Lamp(row["lamp"])])
+            met = _meets_clear_type(row, self.clear_type)
+            cells.append(CHECK if met else CROSS)
         return cells
 
     def blockers(self, data: "DDRDataset") -> BlockerReport:

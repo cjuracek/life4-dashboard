@@ -37,7 +37,7 @@ def _column_widths(rows) -> dict[str, int]:
 
 
 def _header(name: str) -> str:
-    # Capitalize the first letter only: "to LIFE4 Clear" -> "To LIFE4 Clear".
+    # Capitalize the first letter only: "to 980k" -> "To 980k".
     return name[:1].upper() + name[1:]
 
 
