@@ -114,6 +114,28 @@ def _section(title: str, *, expanded: bool):
     return st.expander(f"**{title}**", expanded=expanded, type="compact")
 
 
+_ALL = "All"
+
+
+def _exceptions_to_show(report: BlockerReport):
+    groups = report.exception_groups
+    # A filter with one group would only ever show everything.
+    if len(groups) < 2:
+        return report.exception_rows
+    counts = {_ALL: len(report.exception_rows)}
+    counts |= {name: len(rows) for name, rows in groups.items()}
+    choice = st.segmented_control(
+        "Show",
+        list(counts),
+        default=_ALL,
+        # Clicking the selected group again would otherwise clear the choice.
+        required=True,
+        format_func=lambda name: f"{name} :gray[{counts[name]}]",
+        label_visibility="collapsed",
+    )
+    return report.exception_rows if choice == _ALL else groups[choice]
+
+
 def _blocker_dialog(report: BlockerReport) -> None:
     if lines := report.header_lines():
         with st.container(key=_DIALOG_HEADER_KEY):
@@ -137,7 +159,7 @@ def _blocker_dialog(report: BlockerReport) -> None:
     # Under budget nothing in the pool has to change, so it starts closed;
     # over budget the player has to pick from it, so it opens.
     with _section(report.exceptions_title(), expanded=report.over_budget):
-        _blocker_table(report.exception_rows)
+        _blocker_table(_exceptions_to_show(report))
 
 
 class Life4RankDisplay:

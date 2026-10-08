@@ -87,6 +87,11 @@ TO_IMPROVE = "to improve"
 CHECK = "✓"
 CROSS = "✗"
 
+# What an exception still needs before it stops using one up.
+NEEDS_SCORE = "Needs score"
+NEEDS_LAMP = "Needs lamp"
+NEEDS_BOTH = "Needs both"
+
 #: A LIFE4 ruling, not a DDR fact, so it lives here rather than in the lamp:
 #: a FLARE VIII, IX or EX counts wherever a LIFE4 Clear is required. Full
 #: combos already outrank the red lamp, so nothing else changes.
@@ -180,6 +185,9 @@ class BlockerReport:
     average: tuple[float | None, int] | None = None
     # Whether a flare can stand in for the lamp, which the header footnotes.
     flare_counts: bool = False
+    # The exceptions split by what each still needs, for the dialog's filter.
+    # Empty groups are left out.
+    exception_groups: dict[str, pd.DataFrame] = field(default_factory=dict)
 
     @property
     def empty(self) -> bool:
@@ -553,6 +561,37 @@ class FolderRequirement(Requirement):
             cells.append(CHECK if met else CROSS)
         return cells
 
+    def _exception_groups(
+        self, rows: pd.DataFrame, charts: pd.DataFrame
+    ) -> dict[str, pd.DataFrame]:
+        """Exceptions by what they still need.
+
+        A chart stops using an exception only once it meets both the score
+        and the lamp, so the groups do not overlap: a gauge clear frees every
+        "Needs lamp" chart and none of the "Needs both". Each group drops the
+        columns its name already answers, as the exceptions table drops the
+        floor column: every row in a group shares its lamp, and every "Needs
+        lamp" row meets the score.
+        """
+        score = ~self._score_ok(charts).to_numpy()
+        lamp = ~self._lamp_ok(charts).to_numpy()
+        lamp_column = _LAMP_COLUMNS.get(self.clear_type)
+        score_column = None
+        if self.min_score is not None:
+            score_column = f"to {format_score(self.min_score)}"
+        groups = {
+            NEEDS_SCORE: (score & ~lamp, {lamp_column}),
+            NEEDS_LAMP: (lamp & ~score, {lamp_column, score_column}),
+            NEEDS_BOTH: (score & lamp, {lamp_column}),
+        }
+        return {
+            name: _sorted_for_display(
+                rows[mask].drop(columns=[c for c in rows.columns if c in answered])
+            )
+            for name, (mask, answered) in groups.items()
+            if mask.any()
+        }
+
     def blockers(self, data: "DDRDataset") -> BlockerReport:
         charts = self._charts(data).copy()
         charts["song"] = _song_labels(charts)
@@ -593,4 +632,7 @@ class FolderRequirement(Requirement):
             to_improve=int(counts.get(TO_IMPROVE, 0)),
             average=average,
             flare_counts=self.flare_counts,
+            exception_groups=self._exception_groups(
+                exception_rows, played[is_exception]
+            ),
         )

@@ -502,3 +502,59 @@ def test_the_lamp_column_is_named_for_its_lamp(clear_type, column):
     data = dataset(played("s", 16, 980_000))
     req = FolderRequirement(level=16, clear_type=clear_type, min_score=985_000)
     assert list(req.blockers(data).required_rows.columns)[-1] == column
+
+
+def _life4_with_exceptions():
+    return FolderRequirement(
+        level=16,
+        clear_type=ClearType.LIFE4,
+        min_score=985_000,
+        exceptions=17,
+        exception_floor=965_000,
+    )
+
+
+def test_exceptions_group_by_what_they_still_need():
+    data = dataset(
+        played("score", 16, 970_000, life4_date="1/2/2026"),
+        played("lamp", 16, 990_000),
+        played("both", 16, 970_000),
+    )
+    groups = _life4_with_exceptions().blockers(data).exception_groups
+    assert {name: list(rows["song"]) for name, rows in groups.items()} == {
+        "Needs score": ["score"],
+        "Needs lamp": ["lamp"],
+        "Needs both": ["both"],
+    }
+
+
+def test_each_exception_group_drops_the_columns_its_name_answers():
+    # Every row in a group shares its lamp, and every "Needs lamp" row meets
+    # the score, so those columns would be all one mark.
+    data = dataset(
+        played("score", 16, 970_000, life4_date="1/2/2026"),
+        played("lamp", 16, 990_000),
+        played("both", 16, 970_000),
+    )
+    groups = _life4_with_exceptions().blockers(data).exception_groups
+    assert list(groups["Needs score"].columns) == ["song", "score", "to 985k"]
+    assert list(groups["Needs lamp"].columns) == ["song", "score"]
+    assert list(groups["Needs both"].columns) == ["song", "score", "to 985k"]
+
+
+def test_empty_exception_groups_are_left_out():
+    data = dataset(played("a", 16, 990_000), played("b", 16, 995_000))
+    groups = _life4_with_exceptions().blockers(data).exception_groups
+    assert list(groups) == ["Needs lamp"]
+    assert list(groups["Needs lamp"]["song"]) == ["a", "b"]
+
+
+def test_a_score_only_requirement_groups_every_exception_as_needing_score():
+    data = dataset(played("a", 16, 960_000))
+    report = sixteens(exceptions=3, exception_floor=930_000).blockers(data)
+    assert list(report.exception_groups) == ["Needs score"]
+    assert list(report.exception_groups["Needs score"].columns) == [
+        "song",
+        "score",
+        "to 965k",
+    ]
