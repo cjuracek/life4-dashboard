@@ -59,7 +59,7 @@ def main() -> None:
 
     names = tuple(tier.name for tier in IN_SCOPE)
     rank_choice = st.selectbox(
-        "Select rank", names, index=names.index(Life4RankEnum.Amethyst.name)
+        "Select rank", names, index=names.index(Life4RankEnum.Emerald.name)
     )
     subranks = load_ranks()[Life4RankEnum[rank_choice]]
 
